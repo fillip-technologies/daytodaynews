@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ==========================================================================
+   DayTodayNews master color system — light theme only, single source of truth.
+
+   These are the only colors in the project: Tailwind's default palette is
+   cleared, so utilities such as `bg-primary`, `text-text-muted` or
+   `border-border` are all that exist. Tints are derived from the tokens with
+   opacity modifiers (`bg-primary/10`, `bg-text-primary/5`), never new hex values.
+   ========================================================================== */
+
+@theme static {
+  --color-*: initial;
+
+  --color-background: #f8f8f5;
+  --color-surface: #fdfdfb;
+  --color-surface-elevated: #ffffff;
+
+  --color-text-primary: #14171f;
+  --color-text-secondary: #3d4452;
+  --color-text-muted: #5f6676;
+
+  --color-border: #deddd6;
+
+  --color-primary: #2a3fdb;
+  --color-primary-hover: #1f2fb0;
+  --color-accent: #cf451e;
+  --color-accent-secondary: #6a3de8;
+
+  --color-success: #1d7a4c;
+  --color-warning: #9a5b00;
+  --color-error: #c0322b;
+  --color-info: #0b6aa2;
+
+  /* Elevation, tinted from the primary token. */
+  --shadow-header:
+    0 1px 0 color-mix(in srgb, var(--color-primary) 4%, transparent),
+    0 6px 20px -8px color-mix(in srgb, var(--color-primary) 14%, transparent);
+  --shadow-sheet: -24px 0 48px -12px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: light;
+
+  /* Signature gradient — logo mark and rare highlights only. Kept outside
+     @theme because it is an image, not a color. */
+  --color-gradient-primary: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-accent-secondary) 55%,
+    var(--color-accent) 100%
+  );
+}
+
+@utility bg-gradient-primary {
+  background-image: var(--color-gradient-primary);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+/* Lock page scroll while any modal sheet is open. */
+html:has(dialog[open]) {
+  overflow: hidden;
 }

@@ -1,0 +1,66 @@
+/* Slow ambient motion for the hero's decorative layers. */
+
+.float {
+  animation: float 9s ease-in-out infinite;
+  transform-box: fill-box;
+}
+
+.floatDelayed {
+  animation: float 11s ease-in-out -4s infinite;
+  transform-box: fill-box;
+}
+
+.drift {
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.driftReverse {
+  animation: drift 22s ease-in-out -6s infinite alternate-reverse;
+}
+
+.pulse {
+  animation: pulse 6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(28px, -20px, 0) scale(1.08);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .floatDelayed,
+  .drift,
+  .driftReverse,
+  .pulse {
+    animation: none;
+  }
+}

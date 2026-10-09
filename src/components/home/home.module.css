@@ -1,0 +1,44 @@
+/* Motion for homepage sections below the hero. */
+
+.fadeIn {
+  animation: fade-in 300ms ease-out both;
+}
+
+.float {
+  animation: float 8s ease-in-out infinite;
+  transform-box: fill-box;
+}
+
+.floatDelayed {
+  animation: float 10s ease-in-out -3s infinite;
+  transform-box: fill-box;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fadeIn,
+  .float,
+  .floatDelayed {
+    animation: none;
+  }
+}

@@ -1,0 +1,17 @@
+// Prisma schema for DayTodayNews.
+// Docs: https://pris.ly/d/prisma-schema
+//
+// The connection URL is not defined here (Prisma 7+):
+//   - CLI commands read it from prisma.config.ts
+//   - the app passes it through the pg driver adapter in src/lib/prisma.ts
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Models will be added in the schema design step.
