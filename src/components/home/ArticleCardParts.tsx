@@ -1,10 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import { useId, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { formatDate, initials } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Article, CategoryTone } from "@/types/article";
-import { articleVisuals } from "./ArticleVisuals";
 
 // Shared building blocks for image-led article cards.
 
@@ -14,7 +13,10 @@ const toneClasses: Record<CategoryTone, string> = {
   "accent-secondary": "bg-accent-secondary",
 };
 
-/** Photo or built-in illustration, with a subtle zoom on card hover. */
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
+
+/** Photo of the article with a subtle zoom on card hover. */
 export function CardMedia({
   article,
   priority,
@@ -24,25 +26,19 @@ export function CardMedia({
   priority?: boolean;
   sizes: string;
 }) {
-  const id = useId().replace(/:/g, "");
-  const Visual = article.visual ? articleVisuals[article.visual] : null;
+  const imageSrc = article.image?.src || FALLBACK_IMAGE;
+  const imageAlt = article.image?.alt || article.title;
 
   return (
     <div className="absolute inset-0 -z-10 transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none">
-      {article.image ? (
-        <Image
-          src={article.image.src}
-          alt={article.image.alt}
-          fill
-          priority={priority}
-          sizes={sizes}
-          className="object-cover"
-        />
-      ) : Visual ? (
-        <Visual id={`v${id}`} className="size-full" />
-      ) : (
-        <div className="size-full bg-gradient-primary" />
-      )}
+      <Image
+        src={imageSrc}
+        alt={imageAlt}
+        fill
+        priority={priority}
+        sizes={sizes}
+        className="object-cover"
+      />
     </div>
   );
 }

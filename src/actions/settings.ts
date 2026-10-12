@@ -65,3 +65,53 @@ export async function updateHeaderCategories(slugs: string[]) {
     };
   }
 }
+
+export async function updateHeroArticles(slugs: string[]) {
+  try {
+    await requireStaff();
+
+    if (!Array.isArray(slugs)) {
+      return { success: false, error: "Invalid article selection." };
+    }
+
+    if (slugs.length !== 3) {
+      return { success: false, error: "Exactly 3 articles must be selected for the homepage hero section." };
+    }
+
+    // Verify all slugs exist in DB and are published
+    const existingArticles = await prisma.article.findMany({
+      where: { slug: { in: slugs }, status: "PUBLISHED" },
+      select: { slug: true, title: true, imageUrl: true },
+    });
+
+    if (existingArticles.length !== 3) {
+      return {
+        success: false,
+        error: "All 3 selected articles must be published in the database.",
+      };
+    }
+
+    if (!prisma.siteSetting) {
+      return { success: false, error: "SiteSetting model is initializing. Please try again." };
+    }
+
+    await prisma.siteSetting.upsert({
+      where: { key: "hero_articles" },
+      update: { value: JSON.stringify(slugs) },
+      create: { key: "hero_articles", value: JSON.stringify(slugs) },
+    });
+
+    // Revalidate home page and settings page
+    revalidatePath("/");
+    revalidatePath("/admin/settings");
+
+    return { success: true, slugs };
+  } catch (error) {
+    console.error("updateHeroArticles error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update hero articles.",
+    };
+  }
+}
+

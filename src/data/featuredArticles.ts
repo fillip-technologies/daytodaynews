@@ -13,7 +13,10 @@ export const featuredArticles: Article[] = [
     author: "Shruti Singh",
     date: "2026-12-12",
     readTime: 8,
-    visual: "ai-operations",
+    image: {
+      src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+      alt: "How AI Automation Can Transform Business Operations in 2026",
+    },
   },
   {
     title: "10 Real-World Use Cases of AI Agents in Modern Businesses",
@@ -23,7 +26,11 @@ export const featuredArticles: Article[] = [
     categoryTone: "accent",
     author: "Shruti Singh",
     date: "2026-12-10",
-    visual: "ai-agents",
+    readTime: 6,
+    image: {
+      src: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80",
+      alt: "10 Real-World Use Cases of AI Agents in Modern Businesses",
+    },
   },
   {
     title: "How to Choose the Right Software Development Partner in India",
@@ -33,6 +40,10 @@ export const featuredArticles: Article[] = [
     categoryTone: "primary",
     author: "Shruti Singh",
     date: "2026-12-08",
-    visual: "dev-workspace",
+    readTime: 7,
+    image: {
+      src: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80",
+      alt: "How to Choose the Right Software Development Partner in India",
+    },
   },
 ];

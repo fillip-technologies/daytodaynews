@@ -10,6 +10,32 @@ export const DEFAULT_HEADER_CATEGORY_SLUGS = [
   "startups",
 ];
 
+export const DEFAULT_HERO_ARTICLE_SLUGS = [
+  "ai-automation-agency-vs-in-house-ai-team--which-model-fits-your-business-",
+  "business-processes-to-automate-with-ai-2026",
+  "choose-software-development-company-india",
+];
+
+export async function getHeroArticleSlugs(): Promise<string[]> {
+  try {
+    if (!prisma.siteSetting) {
+      return DEFAULT_HERO_ARTICLE_SLUGS;
+    }
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: "hero_articles" },
+    });
+    if (setting?.value) {
+      const parsed = JSON.parse(setting.value);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.slice(0, 3);
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load hero_articles setting:", error);
+  }
+  return DEFAULT_HERO_ARTICLE_SLUGS;
+}
+
 export async function getHeaderCategorySlugs(): Promise<string[]> {
   try {
     if (!prisma.siteSetting) {

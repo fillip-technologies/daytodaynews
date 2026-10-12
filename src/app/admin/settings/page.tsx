@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getHeaderCategorySlugs } from "@/lib/settings";
+import { getHeaderCategorySlugs, getHeroArticleSlugs } from "@/lib/settings";
 import { SiteSettingsManager } from "./SiteSettingsManager";
 
 export const metadata = {
@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default async function AdminSettingsPage() {
-  const [topics, selectedSlugs] = await Promise.all([
+  const [topics, selectedSlugs, heroSlugs, publishedArticles] = await Promise.all([
     prisma.topic.findMany({
       orderBy: { label: "asc" },
       select: {
@@ -21,7 +21,29 @@ export default async function AdminSettingsPage() {
       },
     }),
     getHeaderCategorySlugs(),
+    getHeroArticleSlugs(),
+    prisma.article.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { publishedAt: "desc" },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        imageUrl: true,
+        imageAlt: true,
+        topicSlug: true,
+        authorName: true,
+        publishedAt: true,
+      },
+    }),
   ]);
 
-  return <SiteSettingsManager topics={topics} initialSelectedSlugs={selectedSlugs} />;
+  return (
+    <SiteSettingsManager
+      topics={topics}
+      initialSelectedSlugs={selectedSlugs}
+      articles={publishedArticles}
+      initialHeroSlugs={heroSlugs}
+    />
+  );
 }

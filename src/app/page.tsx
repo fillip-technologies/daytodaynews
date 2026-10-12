@@ -7,6 +7,7 @@ import { TrendingPosts } from "@/components/home/TrendingPosts";
 import { primaryNavigation } from "@/config/navigation";
 import {
   getEditorsPicks,
+  getHeroArticles,
   getLatestArticles,
   getTopics,
   getTrendingArticles,
@@ -19,8 +20,9 @@ const latestFilters: ArticleFilter[] = [
 ];
 
 export default async function Home() {
-  const [topics, editorsPicks, latest, trending] = await Promise.all([
+  const [topics, heroArticles, editorsPicks, latest, trending] = await Promise.all([
     getTopics(),
+    getHeroArticles(),
     getEditorsPicks(),
     getLatestArticles(),
     getTrendingArticles(),
@@ -31,7 +33,7 @@ export default async function Home() {
       <h1 className="sr-only">
         DayTodayNews: AI, software development and technology insights for growing businesses
       </h1>
-      <Hero />
+      <Hero articles={heroArticles} />
       <ExploreTopics topics={topics} />
       <EditorsPicks articles={editorsPicks} />
       <LatestArticles

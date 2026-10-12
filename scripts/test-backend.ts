@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getTopics, getEditorsPicks, getLatestArticles, getTrendingArticles, getArticleBySlug } from "../src/lib/articles";
+import { getTopics, getHeroArticles, getEditorsPicks, getLatestArticles, getTrendingArticles, getArticleBySlug } from "../src/lib/articles";
 import { subscribeNewsletter } from "../src/actions/newsletter";
 import { submitContactForm } from "../src/actions/contact";
 import { submitContributorPitch } from "../src/actions/contribute";
@@ -11,6 +11,13 @@ async function verifyBackend() {
   // 1. Test Topics
   const topics = await getTopics();
   console.log(`✓ Topics retrieved: ${topics.length}`);
+
+  // 1b. Test Hero Articles (Top 3)
+  const hero = await getHeroArticles();
+  console.log(`✓ Hero articles retrieved: ${hero.length} (Lead: "${hero[0]?.title}")`);
+  console.log(`   - Lead Story Image: ${hero[0]?.image?.src}`);
+  console.log(`   - Side #1 Image:    ${hero[1]?.image?.src}`);
+  console.log(`   - Side #2 Image:    ${hero[2]?.image?.src}`);
 
   // 2. Test Editors Picks
   const editors = await getEditorsPicks(3);

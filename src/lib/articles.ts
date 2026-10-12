@@ -84,6 +84,57 @@ async function getTopicMap(): Promise<Map<string, Topic>> {
   return new Map(allTopics.map((t) => [t.slug, t]));
 }
 
+export async function getHeroArticles(): Promise<Article[]> {
+  try {
+    const { getHeroArticleSlugs } = await import("./settings");
+    const slugs = await getHeroArticleSlugs();
+    const topicMap = await getTopicMap();
+
+    const records = await prisma.article.findMany({
+      where: { slug: { in: slugs }, status: "PUBLISHED" },
+      include: { author: true },
+    });
+
+    const recordMap = new Map(records.map((r) => [r.slug, r]));
+    const orderedArticles: Article[] = [];
+
+    for (const slug of slugs) {
+      const record = recordMap.get(slug);
+      if (record) {
+        orderedArticles.push(mapDbArticleToArticle(record, topicMap));
+      }
+    }
+
+    // Pad with other published articles if fewer than 3 were found
+    if (orderedArticles.length < 3) {
+      const existingSlugs = orderedArticles
+        .map((a) => a.slug)
+        .filter((s): s is string => Boolean(s));
+      const fillers = await prisma.article.findMany({
+        where: {
+          slug: { notIn: existingSlugs },
+          status: "PUBLISHED",
+        },
+        orderBy: [{ featured: "desc" }, { publishedAt: "desc" }],
+        take: 3 - orderedArticles.length,
+        include: { author: true },
+      });
+      for (const filler of fillers) {
+        orderedArticles.push(mapDbArticleToArticle(filler, topicMap));
+      }
+    }
+
+    if (orderedArticles.length > 0) {
+      return orderedArticles.slice(0, 3);
+    }
+  } catch (error) {
+    console.error("Failed to load hero articles from database:", error);
+  }
+
+  const { featuredArticles } = await import("@/data/featuredArticles");
+  return featuredArticles;
+}
+
 export async function getEditorsPicks(limit = 4): Promise<Article[]> {
   try {
     const topicMap = await getTopicMap();

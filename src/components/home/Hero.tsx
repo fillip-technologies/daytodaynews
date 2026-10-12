@@ -1,11 +1,17 @@
+import type { Article } from "@/types/article";
 import { featuredArticles } from "@/data/featuredArticles";
 import { FeaturedArticleCard } from "./FeaturedArticleCard";
 import { SecondaryArticleCard } from "./SecondaryArticleCard";
 import styles from "./Hero.module.css";
 
+type HeroProps = {
+  articles?: Article[];
+};
+
 /** Homepage hero: the lead story beside two stacked secondary stories. */
-export function Hero() {
-  const [lead, ...secondary] = featuredArticles;
+export function Hero({ articles }: HeroProps = {}) {
+  const displayArticles = articles && articles.length > 0 ? articles : featuredArticles;
+  const [lead, ...secondary] = displayArticles;
   if (!lead) return null;
 
   return (
