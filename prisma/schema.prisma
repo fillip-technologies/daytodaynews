@@ -1,17 +1,157 @@
-// Prisma schema for DayTodayNews.
+// Prisma schema for DayTodayNews (MariaDB/MySQL).
 // Docs: https://pris.ly/d/prisma-schema
-//
-// The connection URL is not defined here (Prisma 7+):
-//   - CLI commands read it from prisma.config.ts
-//   - the app passes it through the pg driver adapter in src/lib/prisma.ts
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
 }
 
-// Models will be added in the schema design step.
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum SubmissionStatus {
+  NEW
+  READ
+  REPLIED
+  ARCHIVED
+}
+
+enum PitchStatus {
+  PENDING
+  REVIEWED
+  ACCEPTED
+  REJECTED
+}
+
+enum SubscriberStatus {
+  ACTIVE
+  UNSUBSCRIBED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String?
+  name         String
+  role         Role      @default(EDITOR)
+  avatar       String?
+  bio          String?   @db.Text
+  isActive     Boolean   @default(true)
+  articles     Article[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Topic {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  label       String
+  description String    @db.Text
+  href        String
+  icon        String
+  tone        String
+  articles    Article[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("topics")
+}
+
+model Article {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String        @db.VarChar(255)
+  description   String?       @db.Text
+  content       String?       @db.LongText
+  readTime      Int           @default(5)
+  authorName    String
+  authorId      String?
+  author        User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  topicSlug     String
+  topic         Topic         @relation(fields: [topicSlug], references: [slug], onDelete: Restrict)
+
+  // Cover Art Specification
+  coverPattern  String?
+  coverTones    String?       // JSON stringified e.g. '["accent-secondary", "pink"]'
+  coverIcon     String?
+  imageUrl      String?
+  imageAlt      String?
+
+  // Editorial Flags
+  featured      Boolean       @default(false)
+  editorsPick   Boolean       @default(false)
+  trending      Boolean       @default(false)
+  trendingRank  Int?
+
+  status        ArticleStatus @default(PUBLISHED)
+  viewsCount    Int           @default(0)
+  publishedAt   DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([topicSlug])
+  @@index([publishedAt])
+  @@index([featured, editorsPick, trending])
+  @@map("articles")
+}
+
+model NewsletterSubscriber {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  status       SubscriberStatus @default(ACTIVE)
+  subscribedAt DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@map("newsletter_subscribers")
+}
+
+model ContactSubmission {
+  id        String           @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String           @db.Text
+  status    SubmissionStatus @default(NEW)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@map("contact_submissions")
+}
+
+model ContributorPitch {
+  id        String      @id @default(cuid())
+  name      String
+  email     String
+  topic     String
+  portfolio String?
+  idea      String      @db.VarChar(255)
+  message   String      @db.Text
+  status    PitchStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("contributor_pitches")
+}
+
+model SiteSetting {
+  key       String   @id
+  value     String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}

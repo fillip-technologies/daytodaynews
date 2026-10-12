@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { CoverArt } from "@/components/blog/CoverArt";
 import { Icon } from "@/components/ui/Icon";
 import { getTopic } from "@/data/topics";
@@ -51,13 +52,23 @@ export function TrendingPosts({
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                {post.cover && (
+                {post.image ? (
+                  <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-(color:--tone)">
+                    <Image
+                      src={post.image.src}
+                      alt={post.image.alt}
+                      fill
+                      sizes="64px"
+                      className="object-cover transition-transform duration-500 group-hover:scale-110 motion-reduce:transition-none"
+                    />
+                  </div>
+                ) : post.cover ? (
                   <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-(color:--tone)">
                     <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-110 motion-reduce:transition-none">
                       <CoverArt cover={post.cover} compact className="size-full" />
                     </div>
                   </div>
-                )}
+                ) : null}
                 <div className="min-w-0">
                   <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-(color:--tone)">
                     {post.category}

@@ -7,11 +7,13 @@ import { Sheet } from "@/components/ui/Sheet";
 import { isActivePath, primaryNavigation, secondaryNavigation } from "@/config/navigation";
 import { cn } from "@/lib/cn";
 import { Logo } from "./Logo";
+import type { NavItem } from "@/config/navigation";
 import { SearchButton } from "./SearchButton";
 import { SubscribeButton } from "./SubscribeButton";
 
 type MobileNavProps = {
   id: string;
+  items?: NavItem[];
   open: boolean;
   onClose: () => void;
 };
@@ -20,8 +22,9 @@ type MobileNavProps = {
  * Site menu drawer. It is the full navigation on mobile and the "Menu"
  * overflow on larger screens, so it lists every category plus secondary links.
  */
-export function MobileNav({ id, open, onClose }: MobileNavProps) {
+export function MobileNav({ id, items, open, onClose }: MobileNavProps) {
   const pathname = usePathname();
+  const navList = items && items.length > 0 ? items : primaryNavigation;
 
   return (
     <Sheet id={id} open={open} onClose={onClose} label="Site menu">
@@ -46,7 +49,7 @@ export function MobileNav({ id, open, onClose }: MobileNavProps) {
               Topics
             </p>
             <ul className="mt-2 space-y-0.5">
-              {primaryNavigation.map((item) => {
+              {navList.map((item) => {
                 const active = isActivePath(pathname, item.href);
                 return (
                   <li key={item.href}>

@@ -1,3 +1,6 @@
+"use client";
+
+import { submitContributorPitch } from "@/actions/contribute";
 import { UiForm, type FormFieldConfig } from "./UiForm";
 
 export function ContributorForm({ topics }: { topics: string[] }) {
@@ -23,9 +26,15 @@ export function ContributorForm({ topics }: { topics: string[] }) {
   return (
     <UiForm
       fields={fields}
+      onSubmit={async (values) => {
+        const res = await submitContributorPitch(values);
+        if (!res.success) {
+          throw new Error(res.error || "Failed to submit idea");
+        }
+      }}
       submitLabel="Submit Idea"
       successTitle="Thanks for your idea!"
-      successMessage="Contributor submissions are being connected, so this pitch wasn't sent yet. Please check back soon."
+      successMessage="Your article pitch has been submitted. Our editorial team reviews submissions weekly."
     />
   );
 }

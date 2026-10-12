@@ -1,4 +1,5 @@
-import type { SVGProps } from "react";
+import type { SVGProps, ComponentType } from "react";
+import { icons as lucideIcons, type LucideProps } from "lucide-react";
 
 // Stroke icons drawn on a 24px grid; they inherit `currentColor`.
 const paths = {
@@ -49,11 +50,56 @@ const paths = {
   pen: <path d="M4 20h4L19.5 8.5a2.8 2.8 0 0 0-4-4L4 16v4Zm9.5-13.5 4 4" />,
 } as const;
 
-export type IconName = keyof typeof paths;
+export type LegacyIconName = keyof typeof paths;
+export type IconName = LegacyIconName | (string & {});
 
-type IconProps = SVGProps<SVGSVGElement> & { name: IconName };
+function toPascalCase(str: string): string {
+  return str
+    .replace(/(^\w|-\w)/g, (clear) => clear.replace("-", "").toUpperCase())
+    .replace(/[^a-zA-Z0-9]/g, "");
+}
+
+export type IconProps = Omit<SVGProps<SVGSVGElement>, "ref"> & {
+  name: IconName;
+};
 
 export function Icon({ name, className = "size-5", ...props }: IconProps) {
+  // 1. Check legacy custom SVG paths
+  if (name in paths) {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+        className={className}
+        {...props}
+      >
+        {paths[name as LegacyIconName]}
+      </svg>
+    );
+  }
+
+  // 2. Check Lucide icon library
+  const pascalName = toPascalCase(name) as keyof typeof lucideIcons;
+  const LucideComponent = lucideIcons[pascalName] as ComponentType<LucideProps> | undefined;
+
+  if (LucideComponent) {
+    return (
+      <LucideComponent
+        strokeWidth={1.75}
+        className={className}
+        aria-hidden="true"
+        {...(props as any)}
+      />
+    );
+  }
+
+  // 3. Fallback to sparkles if not found
   return (
     <svg
       viewBox="0 0 24 24"
@@ -67,7 +113,7 @@ export function Icon({ name, className = "size-5", ...props }: IconProps) {
       className={className}
       {...props}
     >
-      {paths[name]}
+      {paths.sparkles}
     </svg>
   );
 }

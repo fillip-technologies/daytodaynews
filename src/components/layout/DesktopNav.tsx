@@ -12,13 +12,14 @@ const visibility: Record<NonNullable<NavItem["showFrom"]>, string> = {
   xl: "hidden xl:block",
 };
 
-export function DesktopNav({ className }: { className?: string }) {
+export function DesktopNav({ items, className }: { items?: NavItem[]; className?: string }) {
   const pathname = usePathname();
+  const navList = items && items.length > 0 ? items : primaryNavigation;
 
   return (
     <nav aria-label="Primary" className={className}>
       <ul className="flex items-center gap-0.5 lg:gap-1">
-        {primaryNavigation.map((item) => {
+        {navList.map((item) => {
           const active = isActivePath(pathname, item.href);
           return (
             <li key={item.href} className={visibility[item.showFrom ?? "md"]}>

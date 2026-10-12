@@ -26,6 +26,7 @@
   --color-primary-hover: #1f2fb0;
   --color-accent: #cf451e;
   --color-accent-secondary: #6a3de8;
+  --color-pink: color-mix(in srgb, var(--color-accent) 55%, var(--color-accent-secondary));
 
   --color-success: #1d7a4c;
   --color-warning: #9a5b00;

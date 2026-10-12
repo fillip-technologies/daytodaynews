@@ -27,7 +27,7 @@ export const categories: Category[] = [
       "Explore practical insights on AI automation, AI agents, workflows, integrations and business use cases.",
   },
   {
-    slug: "software-development",
+    slug: "software",
     topic: "software",
     name: "Software Development",
     description:
@@ -36,7 +36,7 @@ export const categories: Category[] = [
     seoTitle: "Software Development Guides — DayTodayNews",
     seoDescription:
       "Guides on custom software development: choosing partners, estimating costs, architecture and delivery best practices.",
-    aliases: ["software"],
+    aliases: ["software-development"],
   },
   {
     slug: "development",

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
+import { getHeaderNavigation } from "@/lib/settings";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,14 +23,16 @@ export const metadata: Metadata = {
     "AI, software development and technology insights for founders, CTOs and technology teams.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const headerNavigation = await getHeaderNavigation();
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">
-        <Header />
+        <Header items={headerNavigation} />
         {children}
         <Footer />
       </body>

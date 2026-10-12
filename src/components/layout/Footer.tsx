@@ -1,3 +1,6 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { footerNavigation } from "@/config/footerNavigation";
 import { toneStyle } from "@/lib/tones";
 import { FooterBottomBar } from "./FooterBottomBar";
@@ -5,6 +8,12 @@ import { FooterBrand } from "./FooterBrand";
 import { FooterLinks } from "./FooterLinks";
 
 export function Footer() {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <footer className="relative isolate overflow-hidden border-t border-border bg-surface">
       {/* Restrained pink → purple → blue glow behind the brand row */}

@@ -25,6 +25,10 @@ function post({ slug, topic: topicSlug, author = "Shruti Singh", ...rest }: Post
     topic: topic.slug,
     category: topic.label,
     categoryHref: topic.href,
+    image: {
+      src: `https://res.cloudinary.com/eeoc88be/image/upload/daytodaynews/articles/${slug}.jpg`,
+      alt: rest.title,
+    },
     // Legacy 3-tone field; listing cards read the topic's tone instead.
     categoryTone: topic.tone === "pink" ? "accent-secondary" : topic.tone,
   };

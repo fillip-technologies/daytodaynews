@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 import { DesktopNav } from "./DesktopNav";
@@ -8,6 +9,8 @@ import { Logo } from "./Logo";
 import { MobileNav } from "./MobileNav";
 import { SearchButton } from "./SearchButton";
 import { SubscribeButton } from "./SubscribeButton";
+
+import type { NavItem } from "@/config/navigation";
 
 const MENU_ID = "site-menu";
 
@@ -25,9 +28,14 @@ function useScrolled(threshold = 8) {
   );
 }
 
-export function Header() {
+export function Header({ items }: { items?: NavItem[] }) {
+  const pathname = usePathname();
   const scrolled = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <header
@@ -41,7 +49,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:h-[4.5rem] lg:gap-6 lg:px-8">
         <Logo />
 
-        <DesktopNav className="hidden min-w-0 flex-1 justify-center md:flex" />
+        <DesktopNav items={items} className="hidden min-w-0 flex-1 justify-center md:flex" />
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           {/* Visibility lives on wrappers so it never fights the components' own display classes. */}
@@ -72,7 +80,7 @@ export function Header() {
         </div>
       </div>
 
-      <MobileNav id={MENU_ID} open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileNav id={MENU_ID} items={items} open={menuOpen} onClose={() => setMenuOpen(false)} />
     </header>
   );
 }

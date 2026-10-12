@@ -25,7 +25,7 @@ export function CategoryArticles({
   hrefForPage,
 }: CategoryArticlesProps) {
   // A ranked list needs a few entries to be meaningful.
-  const showPopular = popular.length >= 3;
+  const showPopular = popular.length >= 2;
 
   return (
     <section aria-labelledby="category-latest-title" className="mt-14 sm:mt-16">

@@ -4,20 +4,66 @@ import { FeaturedArticle } from "@/components/blog/FeaturedArticle";
 import { CategoryArticles } from "@/components/category/CategoryArticles";
 import { CategoryHeader } from "@/components/category/CategoryHeader";
 import { Newsletter } from "@/components/home/Newsletter";
-import { categories, getCategory, getCategoryByAlias } from "@/data/categories";
+import { getCategory, getCategoryByAlias, type Category } from "@/data/categories";
 import { getTopic } from "@/data/topics";
 import { getCategoryListing, getPopularInCategory } from "@/lib/articles";
 import { parsePage } from "@/lib/pagination";
-import { toneStyle } from "@/lib/tones";
+import { toneStyle, type Tone } from "@/lib/tones";
+import { prisma } from "@/lib/prisma";
 
 type Props = PageProps<"/category/[category]">;
 
 const pageHref = (slug: string, page: number) =>
   page > 1 ? `/category/${slug}?page=${page}` : `/category/${slug}`;
 
+async function resolveCategory(slug: string): Promise<(Category & { tone?: Tone }) | null> {
+  try {
+    // 1. Direct DB lookup by slug (e.g. "ai-automation", "software", "development", etc.)
+    const dbTopic = await prisma.topic.findUnique({ where: { slug } });
+    if (dbTopic) {
+      return {
+        slug: dbTopic.slug,
+        topic: dbTopic.slug,
+        name: dbTopic.label,
+        description: dbTopic.description,
+        icon: (dbTopic.icon as any) || "sparkles",
+        tone: (dbTopic.tone as Tone) || "primary",
+        seoTitle: `${dbTopic.label} Insights — DayTodayNews`,
+        seoDescription: dbTopic.description,
+      };
+    }
+
+    // 2. Check legacy alias (e.g. "software-development" -> "software")
+    const canonical = getCategoryByAlias(slug);
+    if (canonical) {
+      const dbTopicByCanonical = await prisma.topic.findUnique({ where: { slug: canonical.topic } });
+      if (dbTopicByCanonical) {
+        return {
+          slug: dbTopicByCanonical.slug,
+          topic: dbTopicByCanonical.slug,
+          name: dbTopicByCanonical.label,
+          description: dbTopicByCanonical.description,
+          icon: (dbTopicByCanonical.icon as any) || "sparkles",
+          tone: (dbTopicByCanonical.tone as Tone) || "primary",
+          seoTitle: `${dbTopicByCanonical.label} Insights — DayTodayNews`,
+          seoDescription: dbTopicByCanonical.description,
+        };
+      }
+    }
+  } catch (err) {
+    console.error("Failed to query topic from DB:", err);
+  }
+
+  // 3. Fallback to static category definition
+  const staticCat = getCategory(slug) || getCategoryByAlias(slug);
+  if (staticCat) return staticCat;
+
+  return null;
+}
+
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { category: slug } = await params;
-  const category = getCategory(slug);
+  const category = await resolveCategory(slug);
   if (!category) return {};
   const url = pageHref(category.slug, parsePage((await searchParams).page));
   return {
@@ -36,7 +82,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function CategoryPage({ params, searchParams }: Props) {
   const { category: slug } = await params;
-  const category = getCategory(slug);
+  const category = await resolveCategory(slug);
   if (!category) {
     const canonical = getCategoryByAlias(slug);
     if (canonical) permanentRedirect(`/category/${canonical.slug}`);
@@ -48,7 +94,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     getCategoryListing(category.topic, requestedPage),
     getPopularInCategory(category.topic),
   ]);
-  const tone = getTopic(category.topic)?.tone ?? "primary";
+  const tone = category.tone || (getTopic(category.topic)?.tone ?? "primary");
 
   return (
     <main className="flex-1" style={toneStyle(tone)}>
@@ -63,7 +109,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             category={category}
             articleCount={listing.count}
             latestDate={listing.latestDate}
-            related={categories.filter((item) => item.slug !== category.slug)}
           />
 
           {listing.featured && listing.page === 1 && (

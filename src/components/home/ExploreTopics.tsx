@@ -12,6 +12,7 @@ export function ExploreTopics({ topics }: { topics: Topic[] }) {
           id="explore-topics-title"
           title="Explore Topics"
           description="Explore practical insights across the technologies shaping modern businesses."
+          action={{ label: "View all", href: "/blog" }}
         />
 
         {/* Scrolls horizontally below lg; a single row of seven on desktop. */}

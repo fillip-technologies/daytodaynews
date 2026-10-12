@@ -6,10 +6,11 @@ import { toneColor, toneStyle } from "@/lib/tones";
 import styles from "./home.module.css";
 import { sectionContainer } from "./SectionHeader";
 
+import { subscribeNewsletter } from "@/actions/newsletter";
+
 type NewsletterProps = {
   /**
-   * Called with the email on submit. Not wired to a backend yet; until it is,
-   * the form only confirms locally.
+   * Called with the email on submit. Defaults to the built-in MariaDB newsletter server action.
    */
   onSubscribe?: (email: string) => Promise<void>;
 };
@@ -22,7 +23,11 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
     const email = new FormData(event.currentTarget).get("email");
     if (typeof email !== "string" || !email) return;
     setStatus("submitting");
-    await onSubscribe?.(email);
+    if (onSubscribe) {
+      await onSubscribe(email);
+    } else {
+      await subscribeNewsletter(email);
+    }
     setStatus("done");
   }
 
@@ -65,7 +70,7 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
                       <path d="m5 12 5 5 9-10" />
                     </svg>
                   </span>
-                  Thanks for your interest! Newsletter sign-ups are opening soon.
+                  Thanks for subscribing! You are now on our weekly brief.
                 </p>
               ) : (
                 <form onSubmit={handleSubmit} className="mt-7 flex max-w-lg flex-col gap-3 sm:flex-row">

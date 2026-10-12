@@ -7,11 +7,9 @@ type CategoryHeaderProps = {
   category: Category;
   articleCount: number;
   latestDate: string | null;
-  /** Sibling categories for quick switching. */
-  related: Category[];
 };
 
-export function CategoryHeader({ category, articleCount, latestDate, related }: CategoryHeaderProps) {
+export function CategoryHeader({ category, articleCount, latestDate }: CategoryHeaderProps) {
   return (
     <header>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
@@ -55,23 +53,6 @@ export function CategoryHeader({ category, articleCount, latestDate, related }: 
           </p>
         </div>
       </div>
-
-      {related.length > 0 && (
-        <nav aria-label="Other categories" className="mt-8">
-          <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:mx-0 lg:flex-wrap lg:px-0">
-            {related.map((item) => (
-              <li key={item.slug} className="shrink-0">
-                <Link
-                  href={`/category/${item.slug}`}
-                  className="inline-flex h-9 items-center rounded-full border border-border bg-surface-elevated px-3.5 text-sm font-medium text-text-secondary transition-colors hover:border-primary/30 hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-                >
-                  {item.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
     </header>
   );
 }

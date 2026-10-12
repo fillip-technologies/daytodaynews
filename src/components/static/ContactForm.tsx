@@ -1,3 +1,6 @@
+"use client";
+
+import { submitContactForm } from "@/actions/contact";
 import { UiForm, type FormFieldConfig } from "./UiForm";
 
 export const contactSubjects = ["General enquiry", "Editorial", "Partnerships", "Other"];
@@ -13,10 +16,16 @@ export function ContactForm() {
   return (
     <UiForm
       fields={fields}
+      onSubmit={async (values) => {
+        const res = await submitContactForm(values);
+        if (!res.success) {
+          throw new Error(res.error || "Failed to submit message");
+        }
+      }}
       submitLabel="Send Message"
       note="We'll get back to you as soon as possible."
       successTitle="Thanks for reaching out!"
-      successMessage="Our contact form is being connected, so this message wasn't sent yet. Please check back soon."
+      successMessage="Your message has been received. Our editorial team will get back to you shortly."
     />
   );
 }
