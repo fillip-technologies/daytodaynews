@@ -2,24 +2,36 @@
 
 import { prisma } from "@/lib/prisma";
 import { sendContactNotification } from "@/lib/mail";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { cleanEmail, cleanLine, cleanText, FORM_LIMITS } from "@/lib/validation";
 
 export type ContactResult = {
   success: boolean;
   error?: string;
 };
 
-export async function submitContactForm(values: Record<string, string>): Promise<ContactResult> {
-  const name = values.name?.trim();
-  const email = values.email?.trim().toLowerCase();
-  const subject = values.subject?.trim() || "General enquiry";
-  const message = values.message?.trim();
+const HOUR = 60 * 60 * 1000;
 
-  if (!name || !email || !message) {
+export async function submitContactForm(values: Record<string, string>): Promise<ContactResult> {
+  const name = cleanLine(values.name, FORM_LIMITS.name);
+  const email = cleanEmail(values.email);
+  const subject = cleanLine(values.subject, FORM_LIMITS.subject) || "General enquiry";
+  const message = cleanText(values.message, FORM_LIMITS.message);
+
+  if (!name || !values.email?.trim() || !message) {
     return { success: false, error: "Please fill in all required fields." };
+  }
+  if (!email) {
+    return { success: false, error: "Please enter a valid email address." };
+  }
+
+  // Each submission sends two emails, so cap how often one visitor can submit.
+  if (!(await rateLimit("contact", await clientIp(), 5, HOUR))) {
+    return { success: false, error: "Too many messages from your connection. Please try again later." };
   }
 
   try {
-    const submission = await prisma.contactSubmission.create({
+    await prisma.contactSubmission.create({
       data: {
         name,
         email,

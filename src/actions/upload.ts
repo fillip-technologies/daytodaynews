@@ -2,6 +2,7 @@
 
 import { getCurrentUser } from "@/lib/auth";
 import { cloudinary } from "@/lib/cloudinary";
+import { ALLOWED_IMAGE_FORMATS, imageUploadError } from "@/lib/image-upload";
 
 export type UploadResult = {
   success: boolean;
@@ -17,19 +18,10 @@ export async function uploadCoverImage(formData: FormData): Promise<UploadResult
       return { success: false, error: "Unauthorized: Staff editorial access required to upload images." };
     }
 
-    const file = formData.get("file") as File | null;
-    if (!file || !(file instanceof File) || file.size === 0) {
-      return { success: false, error: "Please select a valid image file to upload." };
-    }
-
-    if (!file.type.startsWith("image/")) {
-      return { success: false, error: "Only image files (JPEG, PNG, WebP, GIF, SVG) are supported." };
-    }
-
-    // Max 10MB
-    const MAX_SIZE = 10 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      return { success: false, error: "Image size exceeds 10MB limit." };
+    const file = formData.get("file");
+    const invalid = imageUploadError(file);
+    if (invalid || !(file instanceof File)) {
+      return { success: false, error: invalid ?? "Please select a valid image file to upload." };
     }
 
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -49,6 +41,7 @@ export async function uploadCoverImage(formData: FormData): Promise<UploadResult
     const uploadResponse = await cloudinary.uploader.upload(base64Data, {
       folder: "daytodaynews/articles",
       resource_type: "image",
+      allowed_formats: ALLOWED_IMAGE_FORMATS,
       overwrite: false,
     });
 
@@ -73,19 +66,10 @@ export async function uploadArticleImage(formData: FormData): Promise<UploadResu
       return { success: false, error: "Unauthorized: Staff editorial access required to upload images." };
     }
 
-    const file = formData.get("file") as File | null;
-    if (!file || !(file instanceof File) || file.size === 0) {
-      return { success: false, error: "Please select a valid image file to upload." };
-    }
-
-    if (!file.type.startsWith("image/")) {
-      return { success: false, error: "Only image files (JPEG, PNG, WebP, GIF, SVG) are supported." };
-    }
-
-    // Max 10MB
-    const MAX_SIZE = 10 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      return { success: false, error: "Image size exceeds 10MB limit." };
+    const file = formData.get("file");
+    const invalid = imageUploadError(file);
+    if (invalid || !(file instanceof File)) {
+      return { success: false, error: invalid ?? "Please select a valid image file to upload." };
     }
 
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -104,6 +88,7 @@ export async function uploadArticleImage(formData: FormData): Promise<UploadResu
     const uploadResponse = await cloudinary.uploader.upload(base64Data, {
       folder: "daytodaynews/articles/inline",
       resource_type: "image",
+      allowed_formats: ALLOWED_IMAGE_FORMATS,
       overwrite: false,
     });
 

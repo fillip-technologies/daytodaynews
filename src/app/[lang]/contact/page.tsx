@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
+import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
 import { sectionContainer } from "@/components/home/SectionHeader";
 import { ContactForm } from "@/components/static/ContactForm";
 import { StaticPageHero } from "@/components/static/StaticPageHero";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { toneStyle, type Tone } from "@/lib/tones";
 
-export const metadata: Metadata = {
-  title: "Contact DayTodayNews",
-  description: "Get in touch with the DayTodayNews editorial and business team.",
-  alternates: { canonical: "/contact" },
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/contact">): Promise<Metadata> {
+  return fixedPageMetadata("contact", await localeFromParams(params));
+}
 
 const channels: Array<{ title: string; body: string; subject: string; icon: IconName; tone: Tone }> = [
   {

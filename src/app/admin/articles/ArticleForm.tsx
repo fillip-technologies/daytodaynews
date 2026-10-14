@@ -6,6 +6,9 @@ import Link from "next/link";
 import { createArticle, updateArticle } from "@/actions/articles";
 import { uploadArticleImage } from "@/actions/upload";
 import { ArticleContent } from "@/components/article/ArticleContent";
+import { SeoFields } from "@/components/admin/SeoFields";
+import type { Locale } from "@/i18n/config";
+import { emptySeoFields, type SeoFieldsValue } from "@/lib/seo/validate";
 import { CoverImageUploader } from "./CoverImageUploader";
 import type { ArticleStatus } from "@/generated/prisma";
 
@@ -27,7 +30,13 @@ type ArticleData = {
   coverIcon?: string | null;
   imageUrl?: string | null;
   imageAlt?: string | null;
+  /** Hindi version; empty title means the article has none. */
+  hi?: { title: string; description?: string | null; content?: string | null } | null;
+  /** SEO overrides per language. */
+  seo?: Record<Locale, SeoFieldsValue>;
 };
+
+type EditorLanguage = "en" | "hi";
 
 type Option = {
   value: string;
@@ -38,9 +47,11 @@ type ArticleFormProps = {
   initialData?: ArticleData;
   topics: Option[];
   authors: Option[];
+  /** Site URL and title formats, for the SEO previews. */
+  seoContext: { siteUrl: string; titleTemplate: Record<Locale, string> };
 };
 
-export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) {
+export function ArticleForm({ initialData, topics, authors, seoContext }: ArticleFormProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEditing = Boolean(initialData?.id);
@@ -60,6 +71,19 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
   const [trending, setTrending] = useState(initialData?.trending || false);
   const [status, setStatus] = useState<ArticleStatus>(initialData?.status || "PUBLISHED");
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+
+  // Hindi version. Title, summary and content fields edit whichever language is active.
+  const [language, setLanguage] = useState<EditorLanguage>("en");
+  const [hiTitle, setHiTitle] = useState(initialData?.hi?.title || "");
+  const [hiDescription, setHiDescription] = useState(initialData?.hi?.description || "");
+  const [hiContent, setHiContent] = useState(initialData?.hi?.content || "");
+  const editorContent = language === "en" ? content : hiContent;
+  const setEditorContent = language === "en" ? setContent : setHiContent;
+
+  // SEO overrides per language; the SEO card follows the same language switch.
+  const [seo, setSeo] = useState<Record<Locale, SeoFieldsValue>>(
+    initialData?.seo ?? { en: emptySeoFields, hi: emptySeoFields },
+  );
 
   // Cover styling states
   const [coverPattern, setCoverPattern] = useState(initialData?.coverPattern || "orbit");
@@ -104,11 +128,11 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selected = content.substring(start, end);
+    const selected = editorContent.substring(start, end);
     const replacement = `${prefix}${selected || "text"}${suffix}`;
 
-    const newContent = content.substring(0, start) + replacement + content.substring(end);
-    setContent(newContent);
+    const newContent = editorContent.substring(0, start) + replacement + editorContent.substring(end);
+    setEditorContent(newContent);
 
     setTimeout(() => {
       textarea.focus();
@@ -130,16 +154,18 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
       return;
     }
 
+    // Uploads finish later; keep writing to the language that started them.
+    const setTarget = setEditorContent;
     const textarea = textareaRef.current;
-    const start = textarea ? textarea.selectionStart : content.length;
-    const end = textarea ? textarea.selectionEnd : content.length;
+    const start = textarea ? textarea.selectionStart : editorContent.length;
+    const end = textarea ? textarea.selectionEnd : editorContent.length;
 
     const cleanName = file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ");
     const placeholder = `\n\n![Uploading ${cleanName}...]()\n\n`;
 
     const contentWithPlaceholder =
-      content.substring(0, start) + placeholder + content.substring(end);
-    setContent(contentWithPlaceholder);
+      editorContent.substring(0, start) + placeholder + editorContent.substring(end);
+    setTarget(contentWithPlaceholder);
 
     setUploadingInline(true);
     setError(null);
@@ -152,15 +178,15 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
       const res = await uploadArticleImage(formData);
       if (res.success && res.url) {
         const finalMarkdown = `\n\n![${cleanName}](${res.url})\n\n`;
-        setContent((prev) => prev.replace(placeholder, finalMarkdown));
+        setTarget((prev) => prev.replace(placeholder, finalMarkdown));
         setUploadNotice(`Image "${cleanName}" uploaded to Cloudinary! Click "Save Changes" to publish it live.`);
       } else {
         setError(res.error || "Failed to upload image to Cloudinary.");
-        setContent((prev) => prev.replace(placeholder, ""));
+        setTarget((prev) => prev.replace(placeholder, ""));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image upload failed.");
-      setContent((prev) => prev.replace(placeholder, ""));
+      setTarget((prev) => prev.replace(placeholder, ""));
     } finally {
       setUploadingInline(false);
     }
@@ -212,6 +238,8 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
       coverIcon,
       imageUrl: imageUrl || undefined,
       imageAlt: imageAlt || undefined,
+      hi: { title: hiTitle, description: hiDescription, content: hiContent },
+      seo,
     };
 
     try {
@@ -263,7 +291,7 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
         <div className="flex items-center gap-3">
           {isEditing && slug && (
             <Link
-              href={`/articles/${slug}`}
+              href={`/${language}/articles/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 text-xs font-semibold text-text-primary shadow-xs transition-colors hover:border-primary/40 hover:text-primary"
@@ -300,7 +328,7 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
           </span>
           {isEditing && slug && (
             <Link
-              href={`/articles/${slug}`}
+              href={`/${language}/articles/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="font-bold underline hover:opacity-80"
@@ -315,20 +343,62 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column (2 Cols): Metadata, Excerpt, Markdown Editor */}
         <div className="space-y-5 lg:col-span-2">
+          {/* Language switch: the title, summary and content fields below edit this language. */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface-elevated px-6 py-4 shadow-2xs">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-text-primary">Article Language</p>
+              <p className="mt-0.5 text-[11px] text-text-muted">
+                {language === "en"
+                  ? "English is required and appears at /en."
+                  : "Optional. Leave the Hindi title empty and /hi shows the English article with a note."}
+              </p>
+            </div>
+            <div role="tablist" aria-label="Article language" className="flex gap-1 rounded-lg border border-border bg-background p-1">
+              {(["en", "hi"] as const).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  role="tab"
+                  aria-selected={language === code}
+                  onClick={() => setLanguage(code)}
+                  className={`rounded-md px-3 py-1 text-xs font-semibold ${
+                    language === code
+                      ? "bg-surface-elevated text-primary shadow-2xs"
+                      : "text-text-muted hover:text-text-primary"
+                  }`}
+                >
+                  {code === "en" ? "English" : "हिंदी"}
+                  {code === "hi" && hiTitle.trim() ? " ✓" : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Title & Slug */}
           <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-2xs space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-text-primary">
-                Article Title
+                {language === "en" ? "Article Title" : "Hindi Title"}
               </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="e.g. Next.js 16 Architecture Best Practices"
-                className="mt-1.5 h-11 w-full rounded-xl border border-border bg-background px-3.5 text-base font-semibold text-text-primary focus:border-primary focus:outline-none"
-              />
+              {language === "en" ? (
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  placeholder="e.g. Next.js 16 Architecture Best Practices"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-border bg-background px-3.5 text-base font-semibold text-text-primary focus:border-primary focus:outline-none"
+                />
+              ) : (
+                <input
+                  type="text"
+                  lang="hi"
+                  value={hiTitle}
+                  onChange={(e) => setHiTitle(e.target.value)}
+                  placeholder="उदाहरण: Next.js 16 आर्किटेक्चर की बेस्ट प्रैक्टिस"
+                  className="mt-1.5 h-11 w-full rounded-xl border border-border bg-background px-3.5 text-base font-semibold text-text-primary focus:border-primary focus:outline-none"
+                />
+              )}
             </div>
 
             <div>
@@ -362,13 +432,18 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-text-primary">
-                Summary / Excerpt
+                {language === "en" ? "Summary / Excerpt" : "Hindi Summary"}
               </label>
               <textarea
                 rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="A compelling one or two sentence summary of the article..."
+                lang={language}
+                value={language === "en" ? description : hiDescription}
+                onChange={(e) => (language === "en" ? setDescription : setHiDescription)(e.target.value)}
+                placeholder={
+                  language === "en"
+                    ? "A compelling one or two sentence summary of the article..."
+                    : "लेख का एक-दो वाक्यों में सारांश..."
+                }
                 className="mt-1.5 w-full rounded-xl border border-border bg-background p-3 text-xs leading-relaxed text-text-primary focus:border-primary focus:outline-none"
               />
             </div>
@@ -378,7 +453,7 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
           <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-2xs">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
               <label className="text-xs font-bold uppercase tracking-wider text-text-primary">
-                Article Content (Markdown)
+                {language === "en" ? "Article Content (Markdown)" : "Hindi Content (Markdown)"}
               </label>
               <div className="flex gap-1 rounded-lg border border-border bg-background p-1">
                 <button
@@ -514,8 +589,9 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
                   <textarea
                     ref={textareaRef}
                     rows={20}
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    lang={language}
+                    value={editorContent}
+                    onChange={(e) => setEditorContent(e.target.value)}
                     onPaste={handleEditorPaste}
                     onDrop={handleEditorDrop}
                     placeholder="Write your story using markdown (## Headings, **bold**, lists, > blockquotes, ![images]...)..."
@@ -540,14 +616,37 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
                 </>
               ) : (
                 <div className="min-h-96 rounded-xl border border-border bg-background p-6">
-                  {content ? (
-                    <ArticleContent content={content} />
+                  {editorContent ? (
+                    <ArticleContent content={editorContent} />
                   ) : (
                     <p className="text-xs text-text-muted">Type markdown content to see live preview.</p>
                   )}
                 </div>
               )}
             </div>
+          </div>
+
+          {/* SEO for the active language (switch at the top of the form) */}
+          <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-2xs">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-text-primary">
+                SEO · {language === "en" ? "English" : "हिंदी"}
+              </h2>
+              <span className="text-[11px] text-text-muted">Empty fields use the article&apos;s own title, summary and cover.</span>
+            </div>
+            <SeoFields
+              key={language}
+              value={seo[language]}
+              onChange={(next) => setSeo((all) => ({ ...all, [language]: next }))}
+              auto={{
+                title: language === "en" ? title : hiTitle || title,
+                description: language === "en" ? description : hiDescription || description,
+                image: imageUrl || undefined,
+              }}
+              titleTemplate={seoContext.titleTemplate[language]}
+              url={`${seoContext.siteUrl}/${language}/articles/${slug || "your-article"}`}
+              lang={language}
+            />
           </div>
         </div>
 
@@ -688,7 +787,7 @@ export function ArticleForm({ initialData, topics, authors }: ArticleFormProps) 
         <div className="flex items-center gap-3">
           {isEditing && slug && (
             <Link
-              href={`/articles/${slug}`}
+              href={`/${language}/articles/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-4 text-xs font-semibold text-text-primary shadow-xs transition-colors hover:border-primary/40 hover:text-primary"

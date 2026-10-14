@@ -147,20 +147,20 @@ Create a `.env` file in the project root:
 
 ```env
 # Database connection string (MariaDB / MySQL)
-DATABASE_URL="mysql://daytodaynews_user:daytodaynews_secret_2026@127.0.0.1:3306/daytodaynews"
+DATABASE_URL="mysql://USER:PASSWORD@127.0.0.1:3306/daytodaynews"
 
 # Mail (SMTP) - Gmail configuration
 MAIL_MAILER=smtp
 MAIL_HOST=smtp.gmail.com
 MAIL_PORT=587
 MAIL_ENCRYPTION=tls
-MAIL_USERNAME=developer4.filliptechnologies@gmail.com
-MAIL_PASSWORD=gxsxixgoavgxbmal
-MAIL_FROM_ADDRESS="developer4.filliptechnologies@gmail.com"
+MAIL_USERNAME="your-smtp-username"
+MAIL_PASSWORD="your-smtp-app-password"
+MAIL_FROM_ADDRESS="noreply@example.com"
 MAIL_FROM_NAME="FBOS"
 
 # Authentication Session Secret
-JWT_SECRET="daytodaynews_production_super_secret_jwt_key_2026"
+JWT_SECRET="<random 48+ chars: openssl rand -base64 48>"
 ```
 
 ### 3. Database Initialization

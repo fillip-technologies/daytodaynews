@@ -9,6 +9,9 @@ import { formatDate } from "@/lib/format";
 import { useAdminDataTable } from "@/hooks/useAdminDataTable";
 import { DataTablePagination } from "@/components/admin/DataTablePagination";
 import type { Tone } from "@/lib/tones";
+import { SeoFields } from "@/components/admin/SeoFields";
+import type { Locale } from "@/i18n/config";
+import { emptySeoFields, toSeoFields, type CleanSeo, type SeoFieldsValue } from "@/lib/seo/validate";
 
 type CategoryItem = {
   id: string;
@@ -22,10 +25,16 @@ type CategoryItem = {
   _count: {
     articles: number;
   };
+  /** Hindi name/description, if set. */
+  translations: { label: string; description: string | null }[];
+  /** SEO overrides, one row per language. */
+  seo: Array<Partial<CleanSeo> & { locale: string }>;
 };
 
 type CategoryManagerProps = {
   initialCategories: CategoryItem[];
+  /** Site URL and title formats, for the SEO previews. */
+  seoContext: { siteUrl: string; titleTemplate: Record<Locale, string> };
 };
 
 const AVAILABLE_TONES: { value: Tone; label: string; bgClass: string; textClass: string; borderClass: string }[] = [
@@ -59,7 +68,7 @@ const AVAILABLE_TONES: { value: Tone; label: string; bgClass: string; textClass:
   },
 ];
 
-export function CategoryManager({ initialCategories }: CategoryManagerProps) {
+export function CategoryManager({ initialCategories, seoContext }: CategoryManagerProps) {
   const [categories, setCategories] = useState<CategoryItem[]>(initialCategories);
   const [search, setSearch] = useState("");
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
@@ -74,6 +83,11 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
   const [icon, setIcon] = useState<string>("sparkles");
   const [tone, setTone] = useState<Tone>("primary");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+  const [hiLabel, setHiLabel] = useState("");
+  const [hiDescription, setHiDescription] = useState("");
+  const [seo, setSeo] = useState<Record<Locale, SeoFieldsValue>>({ en: emptySeoFields, hi: emptySeoFields });
+  const [seoLang, setSeoLang] = useState<Locale>("en");
+  const [showSeo, setShowSeo] = useState(false);
 
   function openCreateModal() {
     setSelectedCategory(null);
@@ -82,6 +96,11 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
     setDescription("");
     setIcon("sparkles");
     setTone("primary");
+    setHiLabel("");
+    setHiDescription("");
+    setSeo({ en: emptySeoFields, hi: emptySeoFields });
+    setSeoLang("en");
+    setShowSeo(false);
     setSlugManuallyEdited(false);
     setMessage(null);
     setModalMode("create");
@@ -94,6 +113,14 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
     setDescription(cat.description);
     setIcon(cat.icon || "sparkles");
     setTone((cat.tone as Tone) || "primary");
+    setHiLabel(cat.translations[0]?.label ?? "");
+    setHiDescription(cat.translations[0]?.description ?? "");
+    setSeo({
+      en: toSeoFields(cat.seo.find((s) => s.locale === "en")),
+      hi: toSeoFields(cat.seo.find((s) => s.locale === "hi")),
+    });
+    setSeoLang("en");
+    setShowSeo(cat.seo.length > 0);
     setSlugManuallyEdited(true);
     setMessage(null);
     setModalMode("edit");
@@ -129,6 +156,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         description,
         icon,
         tone,
+        hi: { label: hiLabel, description: hiDescription },
+        seo,
       });
 
       if (res.success) {
@@ -145,6 +174,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         description,
         icon,
         tone,
+        hi: { label: hiLabel, description: hiDescription },
+        seo,
       });
 
       if (res.success) {
@@ -361,7 +392,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                             {c.slug}
                           </code>
                           <Link
-                            href={`/category/${c.slug}`}
+                            href={`/en/category/${c.slug}`}
                             target="_blank"
                             title="View public category page"
                             className="rounded-lg p-1 text-text-muted transition-colors hover:bg-background hover:text-text-primary"
@@ -505,6 +536,81 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                   placeholder="Short summary for category headers, meta tags, and navigational chips..."
                   className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-text-primary focus:border-primary focus:outline-none"
                 />
+              </div>
+
+              {/* Hindi name and description, shown on /hi pages */}
+              <div className="space-y-3 rounded-xl border border-border bg-background/60 p-3">
+                <div>
+                  <label className="block font-semibold text-text-primary">Hindi Name (हिंदी नाम)</label>
+                  <input
+                    type="text"
+                    lang="hi"
+                    value={hiLabel}
+                    onChange={(e) => setHiLabel(e.target.value)}
+                    placeholder="e.g. AI और ऑटोमेशन"
+                    className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-text-primary focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-text-primary">Hindi Description</label>
+                  <textarea
+                    rows={2}
+                    lang="hi"
+                    value={hiDescription}
+                    onChange={(e) => setHiDescription(e.target.value)}
+                    placeholder="e.g. टूल्स, वर्कफ़्लो और उपयोग के उदाहरण"
+                    className="mt-1 w-full rounded-xl border border-border bg-background p-3 text-text-primary focus:border-primary focus:outline-none"
+                  />
+                </div>
+                <p className="text-[11px] text-text-muted">Optional. Leave the Hindi name empty and /hi pages use the English name.</p>
+              </div>
+
+              {/* SEO for the category page, per language */}
+              <div className="rounded-xl border border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowSeo((v) => !v)}
+                  aria-expanded={showSeo}
+                  className="flex w-full items-center justify-between px-3 py-2.5 font-semibold text-text-primary"
+                >
+                  SEO (Google & social sharing)
+                  <Icon name="chevronDown" className={`size-4 transition-transform ${showSeo ? "rotate-180" : ""}`} />
+                </button>
+                {showSeo && (
+                  <div className="space-y-3 border-t border-border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-text-muted">Empty fields use the category name and description.</span>
+                      <div role="tablist" aria-label="SEO language" className="flex gap-1 rounded-lg border border-border bg-background p-1">
+                        {(["en", "hi"] as const).map((code) => (
+                          <button
+                            key={code}
+                            type="button"
+                            role="tab"
+                            aria-selected={seoLang === code}
+                            onClick={() => setSeoLang(code)}
+                            className={`rounded-md px-3 py-1 text-xs font-semibold ${
+                              seoLang === code ? "bg-surface-elevated text-primary shadow-2xs" : "text-text-muted hover:text-text-primary"
+                            }`}
+                          >
+                            {code === "en" ? "English" : "हिंदी"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <SeoFields
+                      key={seoLang}
+                      value={seo[seoLang]}
+                      onChange={(next) => setSeo((all) => ({ ...all, [seoLang]: next }))}
+                      auto={{
+                        title: seoLang === "en" ? `${label} Insights` : hiLabel || label,
+                        description: seoLang === "en" ? description : hiDescription || description,
+                      }}
+                      titleTemplate={seoContext.titleTemplate[seoLang]}
+                      url={`${seoContext.siteUrl}/${seoLang}/category/${slug || "your-category"}`}
+                      lang={seoLang}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Tone Selection */}

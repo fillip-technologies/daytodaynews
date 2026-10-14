@@ -10,6 +10,8 @@ export type UserMutationResult = {
   error?: string;
 };
 
+const MIN_PASSWORD_LENGTH = 8;
+
 async function requireAdmin() {
   const current = await getCurrentUser();
   if (!current || current.role !== "ADMIN") {
@@ -35,6 +37,10 @@ export async function createUser(data: {
 
     if (!name || !email) {
       return { success: false, error: "Name and email are required." };
+    }
+
+    if (data.password?.trim() && data.password.trim().length < MIN_PASSWORD_LENGTH) {
+      return { success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -109,6 +115,9 @@ export async function updateUser(data: {
     };
 
     if (data.newPassword && data.newPassword.trim()) {
+      if (data.newPassword.trim().length < MIN_PASSWORD_LENGTH) {
+        return { success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` };
+      }
       updatePayload.passwordHash = await hashPassword(data.newPassword.trim());
     }
 

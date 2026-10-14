@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getSiteSeo } from "@/lib/seo/site";
 import { CategoryManager } from "./CategoryManager";
 
 export const metadata = {
@@ -6,16 +7,29 @@ export const metadata = {
 };
 
 export default async function AdminCategoriesPage() {
-  const categories = await prisma.topic.findMany({
-    orderBy: { label: "asc" },
-    include: {
-      _count: {
-        select: {
-          articles: true,
+  const [categories, site] = await Promise.all([
+    prisma.topic.findMany({
+      orderBy: { label: "asc" },
+      include: {
+        _count: {
+          select: {
+            articles: true,
+          },
         },
+        translations: {
+          where: { locale: "hi" },
+          select: { label: true, description: true },
+        },
+        seo: true,
       },
-    },
-  });
+    }),
+    getSiteSeo(),
+  ]);
 
-  return <CategoryManager initialCategories={categories} />;
+  return (
+    <CategoryManager
+      initialCategories={categories}
+      seoContext={{ siteUrl: site.siteUrl, titleTemplate: site.titleTemplate }}
+    />
+  );
 }

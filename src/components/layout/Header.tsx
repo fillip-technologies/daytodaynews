@@ -3,8 +3,10 @@
 import { useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/cn";
 import { DesktopNav } from "./DesktopNav";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Logo } from "./Logo";
 import { MobileNav } from "./MobileNav";
 import { SearchButton } from "./SearchButton";
@@ -28,36 +30,48 @@ function useScrolled(threshold = 8) {
   );
 }
 
-export function Header({ items }: { items?: NavItem[] }) {
-  const pathname = usePathname();
+type HeaderProps = {
+  /** Categories for the header bar. */
+  items?: NavItem[];
+  /** Every category, for the menu drawer; defaults to `items`. */
+  sections?: NavItem[];
+};
+
+export function Header({ items, sections }: HeaderProps) {
+  const { t } = useI18n();
   const scrolled = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  if (pathname?.startsWith("/admin")) {
-    return null;
+  // Close the menu once a navigation lands (e.g. after switching language from it).
+  const pathname = usePathname();
+  const [menuPathname, setMenuPathname] = useState(pathname);
+  if (pathname !== menuPathname) {
+    setMenuPathname(pathname);
+    setMenuOpen(false);
   }
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 border-b transition-[background-color,border-color,box-shadow] duration-200",
-        scrolled
-          ? "border-border bg-surface/95 shadow-header backdrop-blur-sm"
-          : "border-transparent bg-background",
+        "sticky top-0 z-40 border-b border-border transition-[background-color,box-shadow] duration-200",
+        scrolled ? "bg-surface-elevated/95 shadow-header backdrop-blur-sm" : "bg-surface-elevated",
       )}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:h-[4.5rem] lg:gap-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:h-[4.5rem] lg:gap-6 lg:px-8">
         <Logo />
 
-        <DesktopNav items={items} className="hidden min-w-0 flex-1 justify-center md:flex" />
+        <DesktopNav items={items} className="hidden h-full min-w-0 flex-1 justify-center md:flex" />
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           {/* Visibility lives on wrappers so it never fights the components' own display classes. */}
-          <div className="hidden w-56 xl:block">
-            <SearchButton variant="field" className="w-full" />
+          <div className="hidden w-40 xl:block">
+            <SearchButton variant="field" placeholder={t.header.searchPlaceholderShort} className="w-full" />
           </div>
           <div className="xl:hidden">
             <SearchButton variant="icon" />
+          </div>
+          <div className="hidden sm:block">
+            <LanguageSwitcher />
           </div>
           <div className="hidden lg:block">
             <SubscribeButton />
@@ -65,7 +79,7 @@ export function Header({ items }: { items?: NavItem[] }) {
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
+            aria-label={t.header.openMenu}
             aria-haspopup="dialog"
             aria-expanded={menuOpen}
             aria-controls={MENU_ID}
@@ -80,7 +94,12 @@ export function Header({ items }: { items?: NavItem[] }) {
         </div>
       </div>
 
-      <MobileNav id={MENU_ID} items={items} open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileNav
+        id={MENU_ID}
+        sections={sections && sections.length > 0 ? sections : items}
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+      />
     </header>
   );
 }

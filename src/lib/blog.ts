@@ -27,7 +27,7 @@ const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\
 
 /** Every term must start a word (so "ai" matches "AI-driven" but not "explained"). */
 function matchesQuery(article: Article, query: string) {
-  const haystack = [article.title, article.description, article.category, article.author]
+  const haystack = [article.title, article.description, article.searchText, article.category, article.author]
     .filter(Boolean)
     .join(" ");
   return query

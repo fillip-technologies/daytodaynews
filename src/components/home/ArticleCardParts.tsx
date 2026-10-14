@@ -1,11 +1,13 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { type ReactNode } from "react";
+import { format } from "@/i18n/config";
+import { getI18n } from "@/i18n/server";
 import { formatDate, initials } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Article, CategoryTone } from "@/types/article";
 
-// Shared building blocks for image-led article cards.
+// Shared building blocks for the homepage's image-led story cards.
 
 const toneClasses: Record<CategoryTone, string> = {
   primary: "bg-primary",
@@ -16,43 +18,39 @@ const toneClasses: Record<CategoryTone, string> = {
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
 
-/** Photo of the article with a subtle zoom on card hover. */
+/** Fixed-ratio photo of the article with a subtle zoom on card hover. */
 export function CardMedia({
   article,
   priority,
   sizes,
+  className,
+  children,
 }: {
   article: Article;
   priority?: boolean;
   sizes: string;
+  /** Aspect ratio and radius. */
+  className?: string;
+  /** Overlays, e.g. the category badge. */
+  children?: ReactNode;
 }) {
   const imageSrc = article.image?.src || FALLBACK_IMAGE;
   const imageAlt = article.image?.alt || article.title;
 
   return (
-    <div className="absolute inset-0 -z-10 transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none">
-      <Image
-        src={imageSrc}
-        alt={imageAlt}
-        fill
-        priority={priority}
-        sizes={sizes}
-        className="object-cover"
-      />
+    <div className={cn("relative isolate overflow-hidden bg-primary", className)}>
+      <div className="absolute inset-0 -z-10 transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none">
+        <Image
+          src={imageSrc}
+          alt={imageAlt}
+          fill
+          priority={priority}
+          sizes={sizes}
+          className="object-cover"
+        />
+      </div>
+      {children}
     </div>
-  );
-}
-
-/** Bottom-up scrim so white text stays readable; the top stays full color. */
-export function CardScrim({ className }: { className?: string }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        "absolute inset-0 -z-10 bg-linear-to-t from-text-primary/85 via-text-primary/30 to-transparent",
-        className,
-      )}
-    />
   );
 }
 
@@ -77,32 +75,33 @@ export function CardTitleLink({ article, children }: { article: Article; childre
   return (
     <Link
       href={article.href}
-      className="outline-none after:absolute after:inset-0 after:rounded-[inherit] focus-visible:after:outline-2 focus-visible:after:-outline-offset-4 focus-visible:after:outline-surface-elevated"
+      className="outline-none after:absolute after:-inset-2 after:rounded-2xl focus-visible:after:outline-2 focus-visible:after:outline-primary"
     >
       {children}
     </Link>
   );
 }
 
-export function Byline({ article, showAvatar }: { article: Article; showAvatar?: boolean }) {
+export async function Byline({ article, showAvatar }: { article: Article; showAvatar?: boolean }) {
+  const { locale, t } = await getI18n();
   return (
     <div className="flex min-w-0 items-center gap-3">
       {showAvatar && (
         <span
           aria-hidden="true"
-          className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-primary text-xs font-semibold text-surface-elevated ring-2 ring-surface-elevated/40"
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-primary text-xs font-semibold text-surface-elevated"
         >
           {initials(article.author)}
         </span>
       )}
-      <p className="min-w-0 truncate text-[0.8125rem] text-surface-elevated/80">
-        <span className="font-medium text-surface-elevated">By {article.author}</span>
+      <p className="min-w-0 truncate text-[0.8125rem] text-text-muted">
+        <span className="font-medium text-text-primary">{format(t.common.by, { author: article.author })}</span>
         <span aria-hidden="true"> · </span>
-        <time dateTime={article.date}>{formatDate(article.date)}</time>
+        <time dateTime={article.date}>{formatDate(article.date, locale)}</time>
         {article.readTime && (
           <>
             <span aria-hidden="true"> · </span>
-            {article.readTime} min read
+            {format(t.common.minRead, { n: article.readTime })}
           </>
         )}
       </p>

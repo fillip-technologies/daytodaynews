@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { Icon } from "@/components/ui/Icon";
 
 /** Page-width container shared by homepage sections. */
@@ -11,11 +11,12 @@ type SectionHeaderProps = {
   action?: { label: string; href: string };
 };
 
+/** Section masthead: a hairline rule with a short brand stroke, then the title. */
 export function SectionHeader({ id, title, description, action }: SectionHeaderProps) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+    <header className="relative flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-t border-border pt-5">
+      <span aria-hidden="true" className="absolute -top-px left-0 h-[3px] w-12 bg-gradient-primary" />
       <div className="max-w-2xl">
-        <span aria-hidden="true" className="mb-3 block h-1 w-8 rounded-full bg-gradient-primary" />
         <h2 id={id} className="text-2xl font-semibold tracking-[-0.02em] text-text-primary sm:text-[1.875rem]">
           {title}
         </h2>

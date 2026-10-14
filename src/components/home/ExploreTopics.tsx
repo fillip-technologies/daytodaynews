@@ -1,18 +1,20 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { Icon } from "@/components/ui/Icon";
 import type { Topic } from "@/data/topics";
+import { getI18n } from "@/i18n/server";
 import { toneStyle } from "@/lib/tones";
 import { SectionHeader, sectionContainer } from "./SectionHeader";
 
-export function ExploreTopics({ topics }: { topics: Topic[] }) {
+export async function ExploreTopics({ topics }: { topics: Topic[] }) {
+  const { t } = await getI18n();
   return (
     <section aria-labelledby="explore-topics-title" className="py-10 sm:py-12">
       <div className={sectionContainer}>
         <SectionHeader
           id="explore-topics-title"
-          title="Explore Topics"
-          description="Explore practical insights across the technologies shaping modern businesses."
-          action={{ label: "View all", href: "/blog" }}
+          title={t.home.exploreTitle}
+          description={t.home.exploreDescription}
+          action={{ label: t.home.exploreViewAll, href: "/blog" }}
         />
 
         {/* Scrolls horizontally below lg; a single row of seven on desktop. */}

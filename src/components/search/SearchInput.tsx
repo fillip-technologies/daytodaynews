@@ -3,6 +3,8 @@
 import Form from "next/form";
 import { useRef, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { useI18n } from "@/i18n/client";
+import { localizePath } from "@/i18n/config";
 
 type SearchInputProps = {
   defaultValue?: string;
@@ -15,15 +17,16 @@ type SearchInputProps = {
 export function SearchInput({
   defaultValue = "",
   category,
-  placeholder = "Search articles, topics, technologies...",
+  placeholder,
 }: SearchInputProps) {
+  const { locale, t } = useI18n();
   const [value, setValue] = useState(defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <Form action="/search" role="search" className="group relative">
+    <Form action={localizePath("/search", locale)} role="search" className="group relative">
       <label htmlFor="site-search" className="sr-only">
-        Search DayTodayNews
+        {t.search.label}
       </label>
       <Icon
         name="search"
@@ -36,7 +39,7 @@ export function SearchInput({
         type="search"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t.search.placeholder}
         autoComplete="off"
         enterKeyHint="search"
         className={`h-16 w-full rounded-full border border-border bg-surface-elevated pl-12 text-base text-text-primary shadow-[0_10px_30px_-20px] shadow-primary/50 transition-[border-color,box-shadow] placeholder:text-text-muted hover:border-text-muted/40 focus:border-primary focus:shadow-[0_0_0_4px] focus:shadow-primary/15 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none ${value ? "pr-40 sm:pr-44" : "pr-30 sm:pr-32"}`}
@@ -51,7 +54,7 @@ export function SearchInput({
               setValue("");
               inputRef.current?.focus();
             }}
-            aria-label="Clear search text"
+            aria-label={t.search.clear}
             className="grid size-9 place-items-center rounded-full bg-text-primary/5 text-text-secondary transition-colors hover:bg-text-primary/10 hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
           >
             <Icon name="close" className="size-4" />
@@ -61,7 +64,7 @@ export function SearchInput({
           type="submit"
           className="group/btn inline-flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-surface-elevated shadow-md shadow-primary/25 transition-colors duration-200 hover:bg-primary-hover outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary sm:px-6"
         >
-          Search
+          {t.search.submit}
           <Icon
             name="arrowRight"
             className="hidden size-4 transition-transform duration-200 group-hover/btn:translate-x-0.5 sm:block motion-reduce:transition-none"

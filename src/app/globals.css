@@ -38,15 +38,19 @@
     0 1px 0 color-mix(in srgb, var(--color-primary) 4%, transparent),
     0 6px 20px -8px color-mix(in srgb, var(--color-primary) 14%, transparent);
   --shadow-sheet: -24px 0 48px -12px color-mix(in srgb, var(--color-primary) 18%, transparent);
+  --shadow-menu: 0 28px 48px -24px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  /* Devanagari glyphs (Hindi) fall through Geist to Noto Sans Devanagari. */
+  --font-sans: var(--font-geist-sans), var(--font-devanagari, sans-serif);
   --font-mono: var(--font-geist-mono);
 }
 
 :root {
   color-scheme: light;
+  /* Keeps hash targets and focused elements clear of the sticky header. */
+  scroll-padding-top: 5.5rem;
 
   /* Signature gradient — logo mark and rare highlights only. Kept outside
      @theme because it is an image, not a color. */
@@ -65,6 +69,12 @@
 body {
   background: var(--color-background);
   color: var(--color-text-primary);
+}
+
+/* Letter-spacing breaks the headline stroke that joins Devanagari letters, so
+   Hindi text ignores the tracking utilities. Unlayered, so it beats them. */
+:lang(hi) {
+  letter-spacing: normal;
 }
 
 ::selection {

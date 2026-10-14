@@ -1,5 +1,6 @@
 import type { Article } from "@/types/article";
 import { featuredArticles } from "@/data/featuredArticles";
+import { getI18n } from "@/i18n/server";
 import { FeaturedArticleCard } from "./FeaturedArticleCard";
 import { SecondaryArticleCard } from "./SecondaryArticleCard";
 import styles from "./Hero.module.css";
@@ -9,26 +10,32 @@ type HeroProps = {
 };
 
 /** Homepage hero: the lead story beside two stacked secondary stories. */
-export function Hero({ articles }: HeroProps = {}) {
+export async function Hero({ articles }: HeroProps = {}) {
+  const { t } = await getI18n();
   const displayArticles = articles && articles.length > 0 ? articles : featuredArticles;
   const [lead, ...secondary] = displayArticles;
   if (!lead) return null;
 
   return (
-    <section aria-label="Featured stories" className="relative isolate">
+    <section aria-label={t.home.featuredStories} className="relative isolate">
       <HeroGlow />
 
-      <div className="mx-auto max-w-7xl px-4 pt-3 pb-12 sm:px-6 sm:pt-5 lg:px-8 lg:pb-16">
-        <div className="grid gap-4 sm:gap-5 md:grid-cols-2 lg:h-[clamp(32rem,calc(100svh-8.5rem),40rem)] lg:grid-cols-[2fr_1fr] lg:grid-rows-2">
+      <div className="mx-auto max-w-7xl px-4 pt-6 pb-12 sm:px-6 sm:pt-8 lg:px-8 lg:pb-16">
+        {/* Lead left; on desktop the side stories sit behind column rules, newspaper-style. */}
+        <div className="grid gap-10 md:grid-cols-2 md:gap-x-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-0">
           <FeaturedArticleCard
             article={lead}
-            className="aspect-[4/5] sm:aspect-[16/11] md:col-span-2 md:aspect-[16/9] lg:col-span-1 lg:row-span-2 lg:aspect-auto"
+            className="md:col-span-2 lg:col-span-1 lg:row-span-2 lg:pr-10"
           />
-          {secondary.slice(0, 2).map((article) => (
+          {secondary.slice(0, 2).map((article, i) => (
             <SecondaryArticleCard
               key={article.href}
               article={article}
-              className="aspect-[4/3] md:aspect-[5/4] lg:aspect-auto"
+              className={
+                i === 0
+                  ? "lg:border-l lg:border-border lg:pb-8 lg:pl-10"
+                  : "lg:border-t lg:border-l lg:border-border lg:pt-8 lg:pl-10"
+              }
             />
           ))}
         </div>

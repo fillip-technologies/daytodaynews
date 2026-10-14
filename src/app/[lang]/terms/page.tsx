@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
+import Link from "@/i18n/Link";
 import { LegalPageLayout, Placeholder, type LegalSection } from "@/components/static/LegalPageLayout";
 
-export const metadata: Metadata = {
-  title: "Terms & Conditions | DayTodayNews",
-  description: "The terms that apply when you use the DayTodayNews website and its content.",
-  alternates: { canonical: "/terms" },
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/terms">): Promise<Metadata> {
+  return fixedPageMetadata("terms", await localeFromParams(params));
+}
 
 const sections: LegalSection[] = [
   {

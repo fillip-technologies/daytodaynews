@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
 import { toneStyle, type Tone } from "@/lib/tones";

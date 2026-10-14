@@ -2,10 +2,9 @@ import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getJwtSecret } from "@/lib/session-secret";
 
 export const SESSION_COOKIE_NAME = "admin_session";
-const JWT_SECRET_STRING = process.env.JWT_SECRET || "daytodaynews_secret_jwt_key_2026_super_secure_random";
-const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
 
 export type UserSession = {
   id: string;
@@ -27,12 +26,12 @@ export async function signSessionToken(payload: UserSession): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
 }
 
 export async function verifySessionToken(token: string): Promise<UserSession | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     if (!payload.id || !payload.email || !payload.role) {
       return null;
     }
@@ -48,8 +47,10 @@ export async function verifySessionToken(token: string): Promise<UserSession | n
 }
 
 /**
- * Reads the session cookie and verifies the user exists in MariaDB.
- * Recovers seamlessly if IDs shifted during database seeding, and falls back to verified JWT payload.
+ * Reads the session cookie and returns the user only while they still exist, are
+ * active and are staff in the database. Fails closed: a deactivated or deleted
+ * user, or a database error, ends the session even though the token is valid.
+ * (Matching by email too keeps sessions working if ids changed after reseeding.)
  */
 export async function getCurrentUser(): Promise<UserSession | null> {
   const cookieStore = await cookies();
@@ -71,7 +72,7 @@ export async function getCurrentUser(): Promise<UserSession | null> {
       select: { id: true, email: true, name: true, role: true, isActive: true },
     });
 
-    if (user && user.isActive) {
+    if (user && user.isActive && (user.role === "ADMIN" || user.role === "EDITOR")) {
       return {
         id: user.id,
         email: user.email,
@@ -79,18 +80,9 @@ export async function getCurrentUser(): Promise<UserSession | null> {
         role: user.role,
       };
     }
-
-    // If verified JWT belongs to staff, preserve active session
-    if (session.role === "ADMIN" || session.role === "EDITOR") {
-      return session;
-    }
-
     return null;
   } catch (error) {
     console.error("Error retrieving current user from database:", error);
-    if (session.role === "ADMIN" || session.role === "EDITOR") {
-      return session;
-    }
     return null;
   }
 }

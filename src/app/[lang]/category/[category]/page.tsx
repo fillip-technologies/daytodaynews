@@ -6,49 +6,52 @@ import { CategoryHeader } from "@/components/category/CategoryHeader";
 import { Newsletter } from "@/components/home/Newsletter";
 import { getCategory, getCategoryByAlias, type Category } from "@/data/categories";
 import { getTopic } from "@/data/topics";
+import { cache } from "react";
+import { defaultLocale, format, isLocale, localizePath, type Locale } from "@/i18n/config";
+import { dictionaries } from "@/i18n/dictionaries";
 import { getCategoryListing, getPopularInCategory } from "@/lib/articles";
 import { parsePage } from "@/lib/pagination";
+import { buildMetadata } from "@/lib/seo/metadata";
+import { getSiteSeo } from "@/lib/seo/site";
+import type { CleanSeo } from "@/lib/seo/validate";
 import { toneStyle, type Tone } from "@/lib/tones";
 import { prisma } from "@/lib/prisma";
 
-type Props = PageProps<"/category/[category]">;
+type Props = PageProps<"/[lang]/category/[category]">;
 
 const pageHref = (slug: string, page: number) =>
   page > 1 ? `/category/${slug}?page=${page}` : `/category/${slug}`;
 
-async function resolveCategory(slug: string): Promise<(Category & { tone?: Tone }) | null> {
+type ResolvedCategory = Category & { tone?: Tone; seo: CleanSeo | null };
+
+// Memoized per request: the page and its metadata both need the category.
+const resolveCategory = cache(async (slug: string, locale: Locale): Promise<ResolvedCategory | null> => {
+  const t = dictionaries[locale];
   try {
-    // 1. Direct DB lookup by slug (e.g. "ai-automation", "software", "development", etc.)
-    const dbTopic = await prisma.topic.findUnique({ where: { slug } });
+    // 1. Direct DB lookup by slug (e.g. "ai-automation", "software", "development", etc.),
+    // 2. else a legacy alias (e.g. "software-development" -> "software").
+    const include = { translations: { where: { locale } }, seo: { where: { locale } } };
+    const dbTopic =
+      (await prisma.topic.findUnique({ where: { slug }, include })) ??
+      (getCategoryByAlias(slug)
+        ? await prisma.topic.findUnique({ where: { slug: getCategoryByAlias(slug)!.topic }, include })
+        : null);
+
     if (dbTopic) {
+      const translation = dbTopic.translations[0];
+      const name = translation?.label || dbTopic.label;
+      const description = translation?.description || dbTopic.description;
       return {
         slug: dbTopic.slug,
         topic: dbTopic.slug,
-        name: dbTopic.label,
-        description: dbTopic.description,
+        name,
+        description,
         icon: (dbTopic.icon as any) || "sparkles",
         tone: (dbTopic.tone as Tone) || "primary",
-        seoTitle: `${dbTopic.label} Insights — DayTodayNews`,
-        seoDescription: dbTopic.description,
+        seoTitle: format(t.category.seoTitle, { category: name }),
+        seoDescription: description,
+        seo: dbTopic.seo[0] ?? null,
       };
-    }
-
-    // 2. Check legacy alias (e.g. "software-development" -> "software")
-    const canonical = getCategoryByAlias(slug);
-    if (canonical) {
-      const dbTopicByCanonical = await prisma.topic.findUnique({ where: { slug: canonical.topic } });
-      if (dbTopicByCanonical) {
-        return {
-          slug: dbTopicByCanonical.slug,
-          topic: dbTopicByCanonical.slug,
-          name: dbTopicByCanonical.label,
-          description: dbTopicByCanonical.description,
-          icon: (dbTopicByCanonical.icon as any) || "sparkles",
-          tone: (dbTopicByCanonical.tone as Tone) || "primary",
-          seoTitle: `${dbTopicByCanonical.label} Insights — DayTodayNews`,
-          seoDescription: dbTopicByCanonical.description,
-        };
-      }
     }
   } catch (err) {
     console.error("Failed to query topic from DB:", err);
@@ -56,43 +59,41 @@ async function resolveCategory(slug: string): Promise<(Category & { tone?: Tone 
 
   // 3. Fallback to static category definition
   const staticCat = getCategory(slug) || getCategoryByAlias(slug);
-  if (staticCat) return staticCat;
+  if (staticCat) {
+    return { ...staticCat, seoTitle: format(t.category.seoTitle, { category: staticCat.name }), seo: null };
+  }
 
   return null;
-}
+});
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
-  const { category: slug } = await params;
-  const category = await resolveCategory(slug);
+  const { lang, category: slug } = await params;
+  const locale = isLocale(lang) ? lang : defaultLocale;
+  const [category, site] = await Promise.all([resolveCategory(slug, locale), getSiteSeo()]);
   if (!category) return {};
-  const url = pageHref(category.slug, parsePage((await searchParams).page));
-  return {
-    title: category.seoTitle,
-    description: category.seoDescription,
-    alternates: { canonical: url },
-    openGraph: {
-      type: "website",
-      siteName: "DayTodayNews",
-      title: category.seoTitle,
-      description: category.seoDescription,
-      url,
-    },
-  };
+  return buildMetadata({
+    locale,
+    path: pageHref(category.slug, parsePage((await searchParams).page)),
+    site,
+    seo: category.seo,
+    auto: { title: category.seoTitle, description: category.seoDescription },
+  });
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
-  const { category: slug } = await params;
-  const category = await resolveCategory(slug);
+  const { lang, category: slug } = await params;
+  const locale = isLocale(lang) ? lang : defaultLocale;
+  const category = await resolveCategory(slug, locale);
   if (!category) {
     const canonical = getCategoryByAlias(slug);
-    if (canonical) permanentRedirect(`/category/${canonical.slug}`);
+    if (canonical) permanentRedirect(localizePath(`/category/${canonical.slug}`, locale));
     notFound();
   }
 
   const requestedPage = parsePage((await searchParams).page);
   const [listing, popular] = await Promise.all([
-    getCategoryListing(category.topic, requestedPage),
-    getPopularInCategory(category.topic),
+    getCategoryListing(category.topic, requestedPage, locale),
+    getPopularInCategory(category.topic, 5, locale),
   ]);
   const tone = category.tone || (getTopic(category.topic)?.tone ?? "primary");
 
@@ -112,7 +113,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           />
 
           {listing.featured && listing.page === 1 && (
-            <section aria-label="Featured article" className="mt-10 sm:mt-12">
+            <section aria-label={dictionaries[locale].common.featuredArticle} className="mt-10 sm:mt-12">
               <FeaturedArticle article={listing.featured} />
             </section>
           )}

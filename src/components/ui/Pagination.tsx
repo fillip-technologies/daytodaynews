@@ -1,4 +1,6 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
+import { format } from "@/i18n/config";
+import { getI18n } from "@/i18n/server";
 import { cn } from "@/lib/cn";
 import { Icon } from "./Icon";
 
@@ -21,10 +23,11 @@ const itemClass =
   "grid h-10 min-w-10 place-items-center rounded-full px-3 text-sm font-medium transition-colors duration-200 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
 
 /** Link-based pagination: crawlable, works without JavaScript. */
-export function Pagination({ page, pageCount, hrefFor, className }: PaginationProps) {
+export async function Pagination({ page, pageCount, hrefFor, className }: PaginationProps) {
   if (pageCount <= 1) return null;
+  const { t } = await getI18n();
 
-  const edge = (target: number, label: string, direction: "prev" | "next") => {
+  const edge = (target: number, label: string, pageLabel: string, direction: "prev" | "next") => {
     const disabled = target < 1 || target > pageCount;
     const content = (
       <>
@@ -41,7 +44,7 @@ export function Pagination({ page, pageCount, hrefFor, className }: PaginationPr
       <Link
         href={hrefFor(target)}
         rel={direction}
-        aria-label={`${label} page`}
+        aria-label={pageLabel}
         className={cn(itemClass, "flex gap-1.5 border border-border bg-surface-elevated text-text-secondary hover:border-primary/30 hover:text-primary")}
       >
         {content}
@@ -50,8 +53,8 @@ export function Pagination({ page, pageCount, hrefFor, className }: PaginationPr
   };
 
   return (
-    <nav aria-label="Pagination" className={cn("flex items-center justify-center gap-1.5 sm:gap-2", className)}>
-      {edge(page - 1, "Previous", "prev")}
+    <nav aria-label={t.pagination.label} className={cn("flex items-center justify-center gap-1.5 sm:gap-2", className)}>
+      {edge(page - 1, t.pagination.previous, t.pagination.previousPage, "prev")}
       <ul className="flex items-center gap-1 sm:gap-1.5">
         {pageItems(page, pageCount).map((item, i) =>
           item === "gap" ? (
@@ -62,7 +65,7 @@ export function Pagination({ page, pageCount, hrefFor, className }: PaginationPr
             <li key={item}>
               <Link
                 href={hrefFor(item)}
-                aria-label={`Page ${item}`}
+                aria-label={format(t.pagination.page, { n: item })}
                 aria-current={item === page ? "page" : undefined}
                 className={cn(
                   itemClass,
@@ -77,7 +80,7 @@ export function Pagination({ page, pageCount, hrefFor, className }: PaginationPr
           ),
         )}
       </ul>
-      {edge(page + 1, "Next", "next")}
+      {edge(page + 1, t.pagination.next, t.pagination.nextPage, "next")}
     </nav>
   );
 }

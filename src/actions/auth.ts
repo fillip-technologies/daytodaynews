@@ -8,21 +8,37 @@ import {
   comparePassword,
   signSessionToken,
 } from "@/lib/auth";
+import { clearRateLimit, clientIp, rateLimit } from "@/lib/rate-limit";
 
 export type LoginResult = {
   success: boolean;
   error?: string;
 };
 
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
+// Compared against when the email is unknown, so a wrong email takes as long as
+// a wrong password and response times don't reveal which accounts exist.
+const DUMMY_HASH = "$2b$10$tLIp0Rt/UD66U7M5HTBJoOot7JsEo.ulTw2eVsdw9aBJuZ.tNiM1S";
+
 export async function loginAdmin(values: {
   email: string;
   password: string;
 }): Promise<LoginResult> {
-  const email = values.email?.trim().toLowerCase();
-  const password = values.password;
+  const email = values.email?.trim().toLowerCase().slice(0, 254);
+  const password = values.password?.slice(0, 200);
 
   if (!email || !password) {
     return { success: false, error: "Email and password are required." };
+  }
+
+  // Brute-force protection: 5 tries per account per connection, 20 per connection.
+  const ip = await clientIp();
+  const allowed =
+    (await rateLimit("login-ip", ip, 20, FIFTEEN_MINUTES)) &&
+    (await rateLimit("login", `${ip}|${email}`, 5, FIFTEEN_MINUTES));
+  if (!allowed) {
+    return { success: false, error: "Too many login attempts. Please wait 15 minutes and try again." };
   }
 
   try {
@@ -30,12 +46,9 @@ export async function loginAdmin(values: {
       where: { email },
     });
 
-    if (!user || !user.isActive || !user.passwordHash) {
-      return { success: false, error: "Invalid email or password." };
-    }
+    const isMatch = await comparePassword(password, user?.passwordHash || DUMMY_HASH);
 
-    const isMatch = await comparePassword(password, user.passwordHash);
-    if (!isMatch) {
+    if (!user || !user.isActive || !user.passwordHash || !isMatch) {
       return { success: false, error: "Invalid email or password." };
     }
 
@@ -59,6 +72,7 @@ export async function loginAdmin(values: {
       path: "/",
     });
 
+    await clearRateLimit("login", `${ip}|${email}`);
     return { success: true };
   } catch (error) {
     console.error("Login error:", error);

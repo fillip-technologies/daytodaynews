@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { seoCreate, seoUpdate } from "@/lib/seo/nested";
+import { cleanLocalizedSeo } from "@/lib/seo/validate";
 import type { ArticleStatus } from "@/generated/prisma";
 
 export type ArticleMutationResult = {
@@ -10,6 +12,17 @@ export type ArticleMutationResult = {
   error?: string;
   slug?: string;
 };
+
+/** Text of an article in another language; an empty title means "no translation". */
+type TranslationInput = { title?: string; description?: string | null; content?: string | null };
+
+function translationData(input: TranslationInput) {
+  return {
+    title: input.title?.trim() ?? "",
+    description: input.description?.trim() || null,
+    content: input.content?.trim() || null,
+  };
+}
 
 async function requireStaff() {
   const current = await getCurrentUser();
@@ -36,9 +49,15 @@ export async function createArticle(data: {
   coverIcon?: string;
   imageUrl?: string;
   imageAlt?: string;
+  hi?: TranslationInput;
+  /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
+  seo?: unknown;
 }): Promise<ArticleMutationResult> {
   try {
     const staff = await requireStaff();
+
+    const seo = cleanLocalizedSeo(data.seo);
+    if (!seo.ok) return { success: false, error: seo.error };
 
     const title = data.title.trim();
     const slug = data.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -76,14 +95,15 @@ export async function createArticle(data: {
         imageUrl: data.imageUrl?.trim() || null,
         imageAlt: data.imageAlt?.trim() || null,
         publishedAt: new Date(),
+        translations: data.hi?.title?.trim()
+          ? { create: { locale: "hi", ...translationData(data.hi) } }
+          : undefined,
+        seo: seoCreate(seo.value),
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
-    revalidatePath(`/articles/${slug}`);
+    revalidatePath("/", "layout"); // Every public page in every language; header menus show articles too.
     revalidatePath("/admin/articles");
-    revalidatePath(`/category/${data.topicSlug}`);
     return { success: true, slug };
   } catch (error) {
     console.error("Create article error:", error);
@@ -110,10 +130,16 @@ export async function updateArticle(
     coverIcon?: string;
     imageUrl?: string;
     imageAlt?: string;
+    hi?: TranslationInput;
+    /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
+    seo?: unknown;
   }
 ): Promise<ArticleMutationResult> {
   try {
     const staff = await requireStaff();
+
+    const seo = cleanLocalizedSeo(data.seo);
+    if (!seo.ok) return { success: false, error: seo.error };
 
     const title = data.title.trim();
     const slug = data.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -159,16 +185,25 @@ export async function updateArticle(
         coverIcon: data.coverIcon || existing.coverIcon,
         imageUrl: data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : existing.imageUrl,
         imageAlt: data.imageAlt !== undefined ? (data.imageAlt?.trim() || null) : existing.imageAlt,
+        // Hindi version: saved with the article, or removed when its title is cleared.
+        translations: !data.hi
+          ? undefined
+          : data.hi.title?.trim()
+            ? {
+                upsert: {
+                  where: { articleId_locale: { articleId: id, locale: "hi" } },
+                  update: translationData(data.hi),
+                  create: { locale: "hi", ...translationData(data.hi) },
+                },
+              }
+            : { deleteMany: { locale: "hi" } },
+        seo: seoUpdate(seo.value, { articleId: id }),
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
-    revalidatePath(`/articles/${slug}`);
-    revalidatePath(`/articles/${existing.slug}`);
+    revalidatePath("/", "layout"); // Every public page in every language; header menus show articles too.
     revalidatePath("/admin/articles");
     revalidatePath(`/admin/articles/${id}/edit`);
-    revalidatePath(`/category/${data.topicSlug}`);
     return { success: true, slug };
   } catch (error) {
     console.error("Update article error:", error);
@@ -180,14 +215,12 @@ export async function deleteArticle(id: string): Promise<{ success: boolean; err
   try {
     await requireStaff();
 
-    const article = await prisma.article.delete({
+    await prisma.article.delete({
       where: { id },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
+    revalidatePath("/", "layout"); // Every public page in every language; header menus show articles too.
     revalidatePath("/admin/articles");
-    revalidatePath(`/category/${article.topicSlug}`);
     return { success: true };
   } catch (error) {
     console.error("Delete article error:", error);
@@ -202,15 +235,13 @@ export async function toggleArticleStatus(
   try {
     await requireStaff();
 
-    const article = await prisma.article.update({
+    await prisma.article.update({
       where: { id },
       data: { status: newStatus },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
+    revalidatePath("/", "layout"); // Every public page in every language; header menus show articles too.
     revalidatePath("/admin/articles");
-    revalidatePath(`/articles/${article.slug}`);
     return { success: true };
   } catch (error) {
     console.error("Toggle status error:", error);
@@ -241,8 +272,7 @@ export async function toggleArticleFlag(
       data: { [flag]: nextVal },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
+    revalidatePath("/", "layout"); // Every public page in every language; header menus show articles too.
     revalidatePath("/admin/articles");
     return { success: true, newValue: nextVal };
   } catch (error) {

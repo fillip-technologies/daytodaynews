@@ -1,5 +1,7 @@
 import { ArticleCard } from "@/components/blog/ArticleCard";
 import { Pagination } from "@/components/ui/Pagination";
+import { format, plural } from "@/i18n/config";
+import { getI18n } from "@/i18n/server";
 import type { Paginated } from "@/lib/pagination";
 import type { Article } from "@/types/article";
 
@@ -10,7 +12,8 @@ type SearchResultsProps = {
   hrefForPage: (page: number) => string;
 };
 
-export function SearchResults({ query, categoryLabel, results, hrefForPage }: SearchResultsProps) {
+export async function SearchResults({ query, categoryLabel, results, hrefForPage }: SearchResultsProps) {
+  const { t } = await getI18n();
   const { items, total, page, pageCount } = results;
 
   return (
@@ -24,24 +27,18 @@ export function SearchResults({ query, categoryLabel, results, hrefForPage }: Se
           >
             {query ? (
               <>
-                <span className="text-text-secondary">Search results for:</span>{" "}
+                <span className="text-text-secondary">{t.search.resultsFor}</span>{" "}
                 <span className="text-primary">&ldquo;{query}&rdquo;</span>
               </>
             ) : (
-              <>All articles in {categoryLabel}</>
+              <>{format(t.search.allIn, { category: categoryLabel ?? "" })}</>
             )}
           </h2>
         </div>
         <p role="status" className="text-sm text-text-muted">
-          <span className="font-semibold text-text-primary">{total}</span>{" "}
-          {total === 1 ? "article" : "articles"} found
-          {query && categoryLabel && <> in {categoryLabel}</>}
-          {pageCount > 1 && (
-            <>
-              {" "}
-              · Page {page} of {pageCount}
-            </>
-          )}
+          {plural(t.search.found, total)}
+          {query && categoryLabel && <> {format(t.search.inCategory, { category: categoryLabel })}</>}
+          {pageCount > 1 && <> · {format(t.search.pageOf, { page, count: pageCount })}</>}
         </p>
       </header>
 

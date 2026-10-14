@@ -1,18 +1,20 @@
 import { ArticleCard } from "@/components/blog/ArticleCard";
+import { getI18n } from "@/i18n/server";
 import type { Article } from "@/types/article";
 import { SectionHeader, sectionContainer } from "./SectionHeader";
 
-export function EditorsPicks({ articles }: { articles: Article[] }) {
+export async function EditorsPicks({ articles }: { articles: Article[] }) {
   if (articles.length === 0) return null;
+  const { t } = await getI18n();
 
   return (
     <section aria-labelledby="editors-picks-title" className="py-10 sm:py-14">
       <div className={sectionContainer}>
         <SectionHeader
           id="editors-picks-title"
-          title="Editors' Picks"
-          description="Handpicked insights for builders, leaders and curious minds."
-          action={{ label: "View All", href: "/editors-picks" }}
+          title={t.home.editorsPicksTitle}
+          description={t.home.editorsPicksDescription}
+          action={{ label: t.common.viewAll, href: "/editors-picks" }}
         />
 
         {/* Swipeable on phones, 2×2 on tablet, one row of four on desktop. */}

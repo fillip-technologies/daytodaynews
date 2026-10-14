@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { socialLinks, type SocialNetwork } from "@/config/footerNavigation";
+import { useI18n } from "@/i18n/client";
 import { toneStyle } from "@/lib/tones";
 
 // Simplified brand glyphs on a 24px grid, filled with currentColor.
@@ -21,15 +24,16 @@ const glyphs: Record<SocialNetwork, ReactNode> = {
 };
 
 export function FooterSocials() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-3">
-      <p className="text-sm font-medium text-text-secondary">Follow Us</p>
+      <p className="text-sm font-medium text-text-secondary">{t.footer.followUs}</p>
       <ul className="flex items-center gap-2">
         {socialLinks.map((social) => (
           <li key={social.network} style={toneStyle(social.tone)}>
             <a
               href={social.href}
-              aria-label={social.label}
+              aria-label={t.footer.social[social.network]}
               {...(social.href.startsWith("http") && { target: "_blank", rel: "noopener noreferrer" })}
               className="grid size-10 place-items-center rounded-full border border-border bg-surface-elevated text-text-secondary transition-[background-color,border-color,color,translate] duration-200 hover:-translate-y-0.5 hover:border-transparent hover:bg-(color:--tone) hover:text-surface-elevated outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:hover:translate-y-0"
             >

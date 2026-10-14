@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { useState, type ReactNode } from "react";
 import { ArticleCard } from "@/components/blog/ArticleCard";
+import { useI18n } from "@/i18n/client";
+import { format, plural } from "@/i18n/config";
 import { cn } from "@/lib/cn";
 import type { Article } from "@/types/article";
 import styles from "./home.module.css";
@@ -26,24 +28,25 @@ export function LatestArticles({
   articles,
   filters,
   sidebar,
-  viewAllHref = "/latest",
+  viewAllHref = "/blog",
 }: LatestArticlesProps) {
+  const { t } = useI18n();
   const [active, setActive] = useState<string | null>(null);
   const visible = active ? articles.filter((article) => article.topic === active) : articles;
-  const activeLabel = filters.find((filter) => filter.value === active)?.label ?? "All";
+  const activeLabel = filters.find((filter) => filter.value === active)?.label ?? t.home.all;
 
   return (
     <section aria-labelledby="latest-articles-title" className="py-10 sm:py-14">
       <div className={sectionContainer}>
         <SectionHeader
           id="latest-articles-title"
-          title="Latest Articles"
-          action={{ label: "View All", href: viewAllHref }}
+          title={t.home.latestTitle}
+          action={{ label: t.common.viewAll, href: viewAllHref }}
         />
 
         <div
           role="group"
-          aria-label="Filter articles by category"
+          aria-label={t.home.filterLabel}
           className="-mx-4 mt-6 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0"
         >
           {filters.map((filter) => {
@@ -71,7 +74,7 @@ export function LatestArticles({
         <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-12">
           <div>
             <p className="sr-only" aria-live="polite">
-              {`Showing ${visible.length} ${visible.length === 1 ? "article" : "articles"} in ${activeLabel}`}
+              {plural(t.home.showing, visible.length, { category: activeLabel })}
             </p>
             {visible.length > 0 ? (
               <ul key={active ?? "all"} className={cn("grid gap-5 sm:grid-cols-2 xl:grid-cols-3", styles.fadeIn)}>
@@ -83,11 +86,11 @@ export function LatestArticles({
               </ul>
             ) : (
               <div className={cn("rounded-2xl border border-dashed border-border px-6 py-14 text-center", styles.fadeIn)}>
-                <p className="font-medium text-text-primary">No {activeLabel} articles yet.</p>
+                <p className="font-medium text-text-primary">{format(t.home.emptyTitle, { category: activeLabel })}</p>
                 <p className="mt-1 text-sm text-text-muted">
-                  New pieces are on the way.{" "}
+                  {t.home.emptyNote}{" "}
                   <Link href={viewAllHref} className="font-medium text-primary hover:text-primary-hover">
-                    Browse all articles
+                    {t.home.browseAll}
                   </Link>
                 </p>
               </div>

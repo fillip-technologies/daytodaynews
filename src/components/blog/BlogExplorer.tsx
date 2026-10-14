@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import styles from "@/components/home/home.module.css";
 import type { Topic } from "@/data/topics";
+import { useI18n } from "@/i18n/client";
+import { localizePath, plural } from "@/i18n/config";
 import {
   BLOG_PAGE_SIZE,
   blogUrl,
@@ -26,6 +28,7 @@ type BlogExplorerProps = {
 
 /** Search, category filters, featured story, results grid and Load More. */
 export function BlogExplorer({ articles, topics, initial }: BlogExplorerProps) {
+  const { locale, t } = useI18n();
   const [query, setQuery] = useState(initial.query);
   const [category, setCategory] = useState(initial.category);
   const [limit, setLimit] = useState(BLOG_PAGE_SIZE);
@@ -48,7 +51,7 @@ export function BlogExplorer({ articles, topics, initial }: BlogExplorerProps) {
     setQuery(state.query);
     setCategory(state.category);
     setLimit(BLOG_PAGE_SIZE);
-    const url = blogUrl(state);
+    const url = localizePath(blogUrl(state), locale);
     if (history === "push") window.history.pushState(null, "", url);
     else window.history.replaceState(null, "", url);
   }
@@ -63,7 +66,7 @@ export function BlogExplorer({ articles, topics, initial }: BlogExplorerProps) {
   });
 
   const activeTopic = topics.find((topic) => topic.slug === category);
-  const heading = query.trim() ? "Search results" : activeTopic ? activeTopic.label : "All Articles";
+  const heading = query.trim() ? t.blog.searchResults : activeTopic ? activeTopic.label : t.blog.allArticles;
 
   function loadMore() {
     const firstNew = items.length;
@@ -85,11 +88,12 @@ export function BlogExplorer({ articles, topics, initial }: BlogExplorerProps) {
           active={category}
           onSelect={(value) => update({ category: value }, "push")}
           hrefFor={(value) => blogUrl({ query, category: value })}
+          labels={{ all: t.blog.all, nav: t.blog.categoriesNav }}
         />
       </div>
 
       {showFeatured && featured && (
-        <section aria-label="Featured article" className="mt-10 sm:mt-12">
+        <section aria-label={t.common.featuredArticle} className="mt-10 sm:mt-12">
           <FeaturedArticle article={featured} />
         </section>
       )}
@@ -106,8 +110,9 @@ export function BlogExplorer({ articles, topics, initial }: BlogExplorerProps) {
             </h2>
           </div>
           <p aria-live="polite" className="text-sm text-text-muted">
-            Showing <span className="font-semibold text-text-primary">{items.length}</span>
-            {total > items.length && <> of {total}</>} {total === 1 ? "article" : "articles"}
+            {total > items.length
+              ? plural(t.blog.showingOf, total, { shown: items.length, total })
+              : plural(t.blog.showing, total, { shown: items.length })}
           </p>
         </header>
 

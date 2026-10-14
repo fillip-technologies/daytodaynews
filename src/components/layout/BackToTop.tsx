@@ -1,9 +1,11 @@
 "use client";
 
 import { Icon } from "@/components/ui/Icon";
+import { useI18n } from "@/i18n/client";
 
 /** Smooth-scrolls to the top and returns keyboard focus to the header. */
 export function BackToTop() {
+  const { t } = useI18n();
   return (
     <a
       href="#"
@@ -15,7 +17,7 @@ export function BackToTop() {
       }}
       className="group inline-flex items-center gap-1.5 rounded-full py-1 text-sm font-medium text-text-secondary transition-colors hover:text-primary outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
     >
-      Back to top
+      {t.footer.backToTop}
       <span className="grid size-7 place-items-center rounded-full border border-border bg-surface-elevated transition-[translate,border-color,background-color,color] duration-200 group-hover:-translate-y-0.5 group-hover:border-transparent group-hover:bg-primary group-hover:text-surface-elevated motion-reduce:group-hover:translate-y-0">
         <Icon name="arrowRight" className="size-3.5 -rotate-90" />
       </span>

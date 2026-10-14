@@ -65,10 +65,28 @@ model Topic {
   icon        String
   tone        String
   articles    Article[]
+  translations TopicTranslation[]
+  seo          SeoMeta[]
+  menuTopics   MenuTopic[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@map("topics")
+}
+
+// Category name/description in another language (the Topic row holds English).
+model TopicTranslation {
+  id          String   @id @default(cuid())
+  topicId     String
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  locale      String   @db.VarChar(10)
+  label       String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([topicId, locale])
+  @@map("topic_translations")
 }
 
 model Article {
@@ -102,11 +120,29 @@ model Article {
   publishedAt   DateTime      @default(now())
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  translations  ArticleTranslation[]
+  seo           SeoMeta[]
 
   @@index([topicSlug])
   @@index([publishedAt])
   @@index([featured, editorsPick, trending])
   @@map("articles")
+}
+
+// Article text in another language (the Article row holds English).
+model ArticleTranslation {
+  id          String   @id @default(cuid())
+  articleId   String
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  locale      String   @db.VarChar(10)
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  content     String?  @db.LongText
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([articleId, locale])
+  @@map("article_translations")
 }
 
 model NewsletterSubscriber {
@@ -154,4 +190,65 @@ model SiteSetting {
   updatedAt DateTime @updatedAt
 
   @@map("site_settings")
+}
+
+// SEO overrides for one page, article or category in one language. Exactly one
+// of pageKey / articleId / topicId is set. Empty fields mean "use the automatic
+// value" (the page's own text, then the site-wide defaults).
+model SeoMeta {
+  id              String   @id @default(cuid())
+  locale          String   @db.VarChar(10)
+  pageKey         String?  @db.VarChar(50)
+  articleId       String?
+  article         Article? @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  topicId         String?
+  topic           Topic?   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  metaTitle       String?  @db.VarChar(255)
+  metaDescription String?  @db.Text
+  keywords        String?  @db.Text
+  ogTitle         String?  @db.VarChar(255)
+  ogDescription   String?  @db.Text
+  ogImage         String?  @db.VarChar(2048)
+  canonicalUrl    String?  @db.VarChar(2048)
+  noIndex         Boolean  @default(false)
+  noFollow        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([pageKey, locale])
+  @@unique([articleId, locale])
+  @@unique([topicId, locale])
+  @@map("seo_meta")
+}
+
+// Fixed-window counters for login and form rate limits. `key` holds the action
+// and a SHA-256 hash of the IP or email, never the raw value.
+model RateLimit {
+  key     String   @id @db.VarChar(191)
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limits")
+}
+
+// A sub-topic link in a category's mega menu, managed under Admin → Categories.
+// Either a search keyword (links to /search within the category) or a direct
+// link (a site path or https URL); a link wins when both are set.
+model MenuTopic {
+  id         String   @id @default(cuid())
+  topicId    String
+  topic      Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  labelEn    String   @db.VarChar(100)
+  labelHi    String?  @db.VarChar(100)
+  query      String?  @db.VarChar(200)
+  href       String?  @db.VarChar(2048)
+  // Keyword topics are hidden while no article matches, unless this is on.
+  alwaysShow Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([topicId, sortOrder])
+  @@map("menu_topics")
 }

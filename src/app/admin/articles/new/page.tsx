@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getSiteSeo } from "@/lib/seo/site";
 import { ArticleForm } from "../ArticleForm";
 
 export const metadata = {
@@ -6,7 +7,7 @@ export const metadata = {
 };
 
 export default async function NewArticlePage() {
-  const [topics, authors] = await Promise.all([
+  const [topics, authors, site] = await Promise.all([
     prisma.topic.findMany({
       orderBy: { label: "asc" },
       select: { slug: true, label: true },
@@ -16,12 +17,14 @@ export default async function NewArticlePage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    getSiteSeo(),
   ]);
 
   return (
     <ArticleForm
       topics={topics.map((t) => ({ value: t.slug, label: t.label }))}
       authors={authors.map((a) => ({ value: a.id, label: a.name }))}
+      seoContext={{ siteUrl: site.siteUrl, titleTemplate: site.titleTemplate }}
     />
   );
 }

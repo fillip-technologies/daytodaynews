@@ -14,7 +14,7 @@ To create the database and dedicated user credentials, run the following command
 pkexec mariadb -e "CREATE DATABASE IF NOT EXISTS daytodaynews CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # 2. Create the dedicated database user
-pkexec mariadb -e "CREATE USER IF NOT EXISTS 'daytodaynews_user'@'localhost' IDENTIFIED BY 'daytodaynews_secret_2026';"
+pkexec mariadb -e "CREATE USER IF NOT EXISTS 'daytodaynews_user'@'localhost' IDENTIFIED BY 'CHOOSE_A_STRONG_PASSWORD';"
 
 # 3. Grant privileges on the new database to the application user
 pkexec mariadb -e "GRANT ALL PRIVILEGES ON daytodaynews.* TO 'daytodaynews_user'@'localhost';"
@@ -29,7 +29,7 @@ pkexec mariadb -e "FLUSH PRIVILEGES;"
 ### Verification Command
 Test that the user can connect and see the database:
 ```bash
-mariadb -u daytodaynews_user -p'daytodaynews_secret_2026' -e "SHOW DATABASES LIKE 'daytodaynews';"
+mariadb -u daytodaynews_user -p'CHOOSE_A_STRONG_PASSWORD' -e "SHOW DATABASES LIKE 'daytodaynews';"
 ```
 
 ---
@@ -40,7 +40,7 @@ Add the following to `.env` in the project root:
 
 ```env
 # Local MariaDB connection string
-DATABASE_URL="mysql://daytodaynews_user:daytodaynews_secret_2026@127.0.0.1:3306/daytodaynews"
+DATABASE_URL="mysql://USER:PASSWORD@127.0.0.1:3306/daytodaynews"
 ```
 
 ---

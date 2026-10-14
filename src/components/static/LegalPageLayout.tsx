@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import type { ReactNode } from "react";
 import { sectionContainer } from "@/components/home/SectionHeader";
 import { formatDate } from "@/lib/format";

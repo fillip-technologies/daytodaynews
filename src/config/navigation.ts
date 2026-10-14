@@ -1,4 +1,22 @@
 import type { IconName } from "@/components/ui/Icon";
+import { stripLocale, type Locale } from "@/i18n/config";
+import type { Dictionary } from "@/i18n/dictionaries/en";
+import type { CoverSpec } from "@/types/article";
+
+export type NavLink = { label: string; href: string };
+
+/** Article teaser shown in a category's mega menu. */
+export type NavStory = {
+  title: string;
+  href: string;
+  /** ISO date. */
+  date: string;
+  readTime?: number;
+  image?: { src: string; alt: string };
+  cover?: CoverSpec;
+  /** Language of the title (English when untranslated). */
+  locale?: Locale;
+};
 
 export type NavItem = {
   label: string;
@@ -10,6 +28,10 @@ export type NavItem = {
   description?: string;
   /** Smallest breakpoint at which the item shows in the header bar (default "md"). */
   showFrom?: "md" | "lg" | "xl";
+  /** Mega-menu content, filled in from live articles (see lib/navigation). */
+  topics?: NavLink[];
+  stories?: NavStory[];
+  articleCount?: number;
 };
 
 /** Primary categories — rendered by DesktopNav and the menu drawer. */
@@ -49,7 +71,7 @@ export const primaryNavigation: NavItem[] = [
     category: "startups",
     icon: "rocket",
     description: "Founders, funding and product growth",
-    showFrom: "lg",
+    showFrom: "xl",
   },
   {
     label: "Insights",
@@ -61,18 +83,20 @@ export const primaryNavigation: NavItem[] = [
   },
 ];
 
-/** Secondary links — shown only in the menu drawer. */
-export const secondaryNavigation: NavItem[] = [
-  { label: "Latest", href: "/latest" },
-  { label: "Newsletter", href: "/newsletter" },
-  { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
+/** Secondary links — shown only in the menu drawer; labels come from the dictionary. */
+export const secondaryNavigation: Array<{ key: keyof Dictionary["secondaryNav"]; href: string }> = [
+  { key: "latest", href: "/blog" },
+  { key: "newsletter", href: "/newsletter" },
+  { key: "about", href: "/about" },
+  { key: "writeForUs", href: "/write-for-us" },
+  { key: "contact", href: "/contact" },
 ];
 
 export const subscribeHref = "/newsletter";
 
-/** True when `pathname` is `href` or a page beneath it. */
+/** True when `pathname` (locale-prefixed or not) is `href` or a page beneath it. */
 export function isActivePath(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const path = stripLocale(pathname);
+  if (href === "/") return path === "/";
+  return path === href || path.startsWith(`${href}/`);
 }

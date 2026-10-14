@@ -12,13 +12,15 @@ type AdminNavProps = {
   user: UserSession;
 };
 
-const navItems = [
+const navItems: Array<{ label: string; href: string; icon: string; adminOnly?: boolean }> = [
   { label: "Dashboard", href: "/admin", icon: "chart" as const },
   { label: "Articles", href: "/admin/articles", icon: "layers" as const },
   { label: "Categories", href: "/admin/categories", icon: "sparkles" as const },
+  { label: "Mega Menu", href: "/admin/menu", icon: "menu" },
   { label: "Users & Staff", href: "/admin/users", icon: "users" as const },
   { label: "Inbox & Leads", href: "/admin/inbox", icon: "mail" as const },
   { label: "Site Configuration", href: "/admin/settings", icon: "settings" as const },
+  { label: "SEO", href: "/admin/seo", icon: "search", adminOnly: true },
 ];
 
 export function AdminNav({ user }: AdminNavProps) {
@@ -61,7 +63,7 @@ export function AdminNav({ user }: AdminNavProps) {
 
         {/* Navigation Links */}
         <nav className="mt-8 space-y-1.5">
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.adminOnly || user.role === "ADMIN").map((item) => {
             const isActive =
               item.href === "/admin"
                 ? pathname === "/admin"

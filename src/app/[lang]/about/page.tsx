@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
+import Link from "@/i18n/Link";
 import { sectionContainer } from "@/components/home/SectionHeader";
 import { StaticPageHero } from "@/components/static/StaticPageHero";
 import { StaticSection } from "@/components/static/StaticSection";
@@ -9,12 +10,9 @@ import { categories } from "@/data/categories";
 import { getTopic } from "@/data/topics";
 import { toneStyle, type Tone } from "@/lib/tones";
 
-export const metadata: Metadata = {
-  title: "About DayTodayNews",
-  description:
-    "Learn about DayTodayNews and our approach to practical technology, AI, software, automation and business insights.",
-  alternates: { canonical: "/about" },
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/about">): Promise<Metadata> {
+  return fixedPageMetadata("about", await localeFromParams(params));
+}
 
 const coverage: TopicGridItem[] = categories.map((category) => ({
   label: category.name,

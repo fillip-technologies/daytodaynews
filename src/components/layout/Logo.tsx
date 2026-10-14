@@ -1,5 +1,8 @@
-import Link from "next/link";
+"use client";
+
+import Link from "@/i18n/Link";
 import Image from "next/image";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/cn";
 
 type LogoProps = {
@@ -8,11 +11,12 @@ type LogoProps = {
 };
 
 export function Logo({ className, onClick }: LogoProps) {
+  const { t } = useI18n();
   return (
     <Link
       href="/"
       onClick={onClick}
-      aria-label="DayTodayNews home"
+      aria-label={t.site.homeLabel}
       className={cn(
         "group flex shrink-0 items-center rounded-lg outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary",
         className,
@@ -20,7 +24,7 @@ export function Logo({ className, onClick }: LogoProps) {
     >
       <Image
         src="/brand/day-to-day-news-logo.png"
-        alt="Day to Day News"
+        alt={t.site.logoAlt}
         width={1589}
         height={989}
         priority

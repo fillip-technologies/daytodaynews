@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { BlogExplorer } from "@/components/blog/BlogExplorer";
 import { Newsletter } from "@/components/home/Newsletter";
+import { getI18n } from "@/i18n/server";
 import { getBlogArticles, getTopics } from "@/lib/articles";
 import { parseBlogParams } from "@/lib/blog";
+import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
 
-export const metadata: Metadata = {
-  title: "DayTodayNews — Technology, AI & Software Insights",
-  description:
-    "Explore practical insights on AI, automation, software development, business technology and the trends shaping modern digital teams.",
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/blog">): Promise<Metadata> {
+  return fixedPageMetadata("blog", await localeFromParams(params));
+}
 
-export default async function BlogPage({ searchParams }: PageProps<"/blog">) {
-  const [params, articles, topics] = await Promise.all([searchParams, getBlogArticles(), getTopics()]);
+export default async function BlogPage({ searchParams }: PageProps<"/[lang]/blog">) {
+  const { locale, t } = await getI18n();
+  const [params, articles, topics] = await Promise.all([
+    searchParams,
+    getBlogArticles(locale),
+    getTopics(locale),
+  ]);
   const initial = parseBlogParams(params);
 
   return (
@@ -37,18 +42,15 @@ export default async function BlogPage({ searchParams }: PageProps<"/blog">) {
                   /
                 </li>
                 <li aria-current="page" className="text-primary">
-                  Insights
+                  {t.blog.breadcrumb}
                 </li>
               </ol>
             </nav>
             <h1 className="mt-4 text-4xl leading-[1.05] font-semibold tracking-[-0.035em] text-text-primary sm:text-5xl lg:text-[3.5rem]">
-              Technology, ideas{" "}
-              <span className="bg-gradient-primary bg-clip-text text-transparent">&amp; insights.</span>
+              {t.blog.heading}{" "}
+              <span className="bg-gradient-primary bg-clip-text text-transparent">{t.blog.headingHighlight}</span>
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-text-secondary">
-              Explore practical insights on AI, software development, automation, business
-              technology and the technologies shaping modern teams.
-            </p>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-text-secondary">{t.blog.intro}</p>
           </header>
 
           <div className="mt-9">

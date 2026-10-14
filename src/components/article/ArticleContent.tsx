@@ -1,4 +1,8 @@
 import ReactMarkdown from "react-markdown";
+import Link from "@/i18n/Link";
+
+const linkClass =
+  "font-medium text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:text-primary-hover hover:decoration-primary-hover";
 
 type ArticleContentProps = {
   content: string;
@@ -77,6 +81,17 @@ export function ArticleContent({ content }: ArticleContentProps) {
           hr: () => (
             <hr className="my-10 border-border" />
           ),
+          // Internal links keep the reader's language (/articles/x → /hi/articles/x).
+          a: ({ href, children }) =>
+            href?.startsWith("/") && !href.startsWith("//") ? (
+              <Link href={href} className={linkClass}>
+                {children}
+              </Link>
+            ) : (
+              <a href={href} className={linkClass}>
+                {children}
+              </a>
+            ),
           strong: ({ children }) => (
             <strong className="font-semibold text-text-primary">
               {children}

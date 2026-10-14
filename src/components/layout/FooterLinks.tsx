@@ -1,14 +1,18 @@
-import Link from "next/link";
+"use client";
+
+import Link from "@/i18n/Link";
 import type { FooterGroup } from "@/config/footerNavigation";
+import { useI18n } from "@/i18n/client";
 import { toneStyle } from "@/lib/tones";
 
 export function FooterLinks({ groups }: { groups: FooterGroup[] }) {
+  const { t } = useI18n();
   return (
-    <nav aria-label="Footer" className="grid grid-cols-2 gap-x-6 gap-y-9 lg:grid-cols-4 lg:gap-x-8">
+    <nav aria-label={t.footer.nav} className="grid grid-cols-2 gap-x-6 gap-y-9 lg:grid-cols-4 lg:gap-x-8">
       {groups.map((group) => {
-        const id = `footer-${group.title.toLowerCase()}`;
+        const id = `footer-${group.id}`;
         return (
-          <div key={group.title} style={toneStyle(group.tone)}>
+          <div key={group.id} style={toneStyle(group.tone)}>
             <h2
               id={id}
               className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-primary"

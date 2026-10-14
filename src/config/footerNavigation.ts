@@ -1,9 +1,13 @@
-import { topics } from "@/data/topics";
+import type { Dictionary } from "@/i18n/dictionaries/en";
 import type { Tone } from "@/lib/tones";
+
+type FooterText = Dictionary["footer"];
 
 export type FooterLink = { label: string; href: string };
 
 export type FooterGroup = {
+  /** Stable id for the group heading. */
+  id: string;
   title: string;
   /** Accent for the group's marker dot. */
   tone: Tone;
@@ -11,46 +15,43 @@ export type FooterGroup = {
 };
 
 // Topics shown in the Explore column, in display order.
-const exploreTopics = ["ai-automation", "software", "development", "business", "startups", "insights"];
+export const exploreTopics = ["ai-automation", "software", "development", "business", "startups", "insights"];
 
-export const footerNavigation: FooterGroup[] = [
+/** Groups after Explore; titles and labels come from the dictionary. */
+export const footerGroups: Array<{
+  id: keyof FooterText["groups"];
+  tone: Tone;
+  links: Array<{ key: keyof FooterText["links"]; href: string }>;
+}> = [
   {
-    title: "Explore",
-    tone: "accent-secondary",
-    links: exploreTopics.flatMap((slug) => {
-      const topic = topics.find((t) => t.slug === slug);
-      return topic ? [{ label: topic.label, href: topic.href }] : [];
-    }),
-  },
-  {
-    title: "Resources",
+    id: "resources",
     tone: "primary",
     links: [
-      { label: "Latest Articles", href: "/latest" },
-      { label: "Editors' Picks", href: "/editors-picks" },
-      { label: "Trending", href: "/trending" },
-      { label: "Guides", href: "/guides" },
-      { label: "Topics", href: "/topics" },
+      { key: "latestArticles", href: "/latest" },
+      { key: "editorsPicks", href: "/editors-picks" },
+      { key: "trending", href: "/trending" },
+      { key: "guides", href: "/guides" },
+      { key: "topics", href: "/topics" },
     ],
   },
   {
-    title: "Company",
+    id: "company",
     tone: "pink",
     links: [
-      { label: "About DayTodayNews", href: "/about" },
-      { label: "Contact", href: "/contact" },
-      { label: "Advertise", href: "/advertise" },
-      { label: "Write for Us", href: "/write-for-us" },
+      { key: "about", href: "/about" },
+      { key: "contact", href: "/contact" },
+      { key: "advertise", href: "/advertise" },
+      { key: "writeForUs", href: "/write-for-us" },
     ],
   },
   {
-    title: "Legal",
+    id: "legal",
     tone: "accent",
     links: [
-      { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "Terms of Use", href: "/terms" },
-      { label: "Cookie Policy", href: "/cookie-policy" },
-      { label: "Disclaimer", href: "/disclaimer" },
+      { key: "privacy", href: "/privacy-policy" },
+      { key: "terms", href: "/terms" },
+      { key: "cookies", href: "/cookie-policy" },
+      { key: "disclaimer", href: "/disclaimer" },
     ],
   },
 ];
@@ -58,9 +59,10 @@ export const footerNavigation: FooterGroup[] = [
 export type SocialNetwork = "linkedin" | "x" | "instagram" | "youtube";
 
 // TODO: replace the placeholder hrefs with the real DayTodayNews profiles.
-export const socialLinks: Array<{ network: SocialNetwork; label: string; href: string; tone: Tone }> = [
-  { network: "linkedin", label: "DayTodayNews on LinkedIn", href: "#", tone: "primary" },
-  { network: "x", label: "DayTodayNews on X", href: "#", tone: "accent-secondary" },
-  { network: "instagram", label: "DayTodayNews on Instagram", href: "#", tone: "pink" },
-  { network: "youtube", label: "DayTodayNews on YouTube", href: "#", tone: "accent" },
+// Accessible names come from the dictionary (footer.social).
+export const socialLinks: Array<{ network: SocialNetwork; href: string; tone: Tone }> = [
+  { network: "linkedin", href: "#", tone: "primary" },
+  { network: "x", href: "#", tone: "accent-secondary" },
+  { network: "instagram", href: "#", tone: "pink" },
+  { network: "youtube", href: "#", tone: "accent" },
 ];

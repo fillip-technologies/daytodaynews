@@ -1,5 +1,6 @@
 import type { ArticleVisualName } from "@/components/home/ArticleVisuals";
 import type { IconName } from "@/components/ui/Icon";
+import type { Locale } from "@/i18n/config";
 import type { Tone } from "@/lib/tones";
 
 /** Palette token a category is drawn in (badge color). */
@@ -15,6 +16,10 @@ export type Article = {
   title: string;
   href: string;
   description?: string;
+  /** Language the title and description are in (English when untranslated). */
+  locale?: Locale;
+  /** English wording of a translated article, so English searches still find it. */
+  searchText?: string;
   /** Display label, e.g. "AI & Automation". */
   category: string;
   categoryHref: string;

@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
+import Link from "@/i18n/Link";
 import { LegalPageLayout, Placeholder, type LegalSection } from "@/components/static/LegalPageLayout";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy | DayTodayNews",
-  description: "How DayTodayNews collects, uses and protects information when you use our website.",
-  alternates: { canonical: "/privacy-policy" },
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/privacy-policy">): Promise<Metadata> {
+  return fixedPageMetadata("privacy-policy", await localeFromParams(params));
+}
 
 const sections: LegalSection[] = [
   {

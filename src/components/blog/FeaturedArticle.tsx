@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { articleVisuals } from "@/components/home/ArticleVisuals";
 import { Icon } from "@/components/ui/Icon";
 import { getTopic } from "@/data/topics";
+import { useI18n } from "@/i18n/client";
+import { format } from "@/i18n/config";
 import { formatDate, initials } from "@/lib/format";
 import { toneStyle } from "@/lib/tones";
 import type { Article } from "@/types/article";
@@ -10,6 +14,7 @@ import { CoverArt } from "./CoverArt";
 
 /** Large split card for the lead story of a listing. */
 export function FeaturedArticle({ article }: { article: Article }) {
+  const { locale, t } = useI18n();
   const tone = (article.topic && getTopic(article.topic)?.tone) || article.categoryTone;
   const Visual = article.visual ? articleVisuals[article.visual] : null;
 
@@ -49,7 +54,7 @@ export function FeaturedArticle({ article }: { article: Article }) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-primary px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-surface-elevated">
               <Icon name="sparkles" className="size-3.5" />
-              Featured
+              {t.common.featured}
             </span>
             <Link
               href={article.categoryHref}
@@ -59,7 +64,7 @@ export function FeaturedArticle({ article }: { article: Article }) {
             </Link>
           </div>
 
-          <h2 className="mt-5 text-2xl leading-[1.15] font-semibold tracking-[-0.025em] text-balance text-text-primary sm:text-3xl lg:text-[2.125rem]">
+          <h2 lang={article.locale} className="mt-5 text-2xl leading-[1.15] font-semibold tracking-[-0.025em] text-balance text-text-primary sm:text-3xl lg:text-[2.125rem]">
             <Link
               href={article.href}
               className="outline-none after:absolute after:inset-0 after:rounded-3xl focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"
@@ -68,7 +73,7 @@ export function FeaturedArticle({ article }: { article: Article }) {
             </Link>
           </h2>
           {article.description && (
-            <p className="mt-4 text-base leading-relaxed text-text-secondary lg:text-lg">
+            <p lang={article.locale} className="mt-4 text-base leading-relaxed text-text-secondary lg:text-lg">
               {article.description}
             </p>
           )}
@@ -82,10 +87,10 @@ export function FeaturedArticle({ article }: { article: Article }) {
                 {initials(article.author)}
               </span>
               <p className="text-sm leading-tight text-text-muted">
-                <span className="block font-medium text-text-primary">By {article.author}</span>
+                <span className="block font-medium text-text-primary">{format(t.common.by, { author: article.author })}</span>
                 <span className="mt-1 block">
-                  <time dateTime={article.date}>{formatDate(article.date)}</time>
-                  {article.readTime && <> · {article.readTime} min read</>}
+                  <time dateTime={article.date}>{formatDate(article.date, locale)}</time>
+                  {article.readTime && <> · {format(t.common.minRead, { n: article.readTime })}</>}
                 </span>
               </p>
             </div>
@@ -93,7 +98,7 @@ export function FeaturedArticle({ article }: { article: Article }) {
               aria-hidden="true"
               className="inline-flex h-11 items-center gap-2 rounded-full bg-primary pr-2 pl-5 text-sm font-semibold text-surface-elevated shadow-md shadow-primary/25 transition-colors duration-300 group-hover:bg-primary-hover"
             >
-              Read Article
+              {t.common.readArticle}
               <span className="grid size-7 place-items-center rounded-full bg-surface-elevated/20 transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none">
                 <Icon name="arrowRight" className="size-4" />
               </span>

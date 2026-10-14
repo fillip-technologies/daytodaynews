@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { seoCreate, seoUpdate } from "@/lib/seo/nested";
+import { cleanLocalizedSeo } from "@/lib/seo/validate";
 
 export type CategoryMutationResult = {
   success: boolean;
@@ -16,15 +18,28 @@ async function requireStaff() {
   }
 }
 
+/** Category name in another language; an empty label means "no translation". */
+type TranslationInput = { label?: string; description?: string | null };
+
+function translationData(input: TranslationInput) {
+  return { label: input.label?.trim() ?? "", description: input.description?.trim() || null };
+}
+
 export async function createCategory(data: {
   label: string;
   slug: string;
   description: string;
   icon: string;
   tone: string;
+  hi?: TranslationInput;
+  /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
+  seo?: unknown;
 }): Promise<CategoryMutationResult> {
   try {
     await requireStaff();
+
+    const seo = cleanLocalizedSeo(data.seo);
+    if (!seo.ok) return { success: false, error: seo.error };
 
     const label = data.label.trim();
     const slug = data.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -49,11 +64,14 @@ export async function createCategory(data: {
         href: `/category/${slug}`,
         icon,
         tone,
+        translations: data.hi?.label?.trim()
+          ? { create: { locale: "hi", ...translationData(data.hi) } }
+          : undefined,
+        seo: seoCreate(seo.value),
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
+    revalidatePath("/", "layout"); // Every public page in every language; header menus list categories too.
     revalidatePath("/admin/categories");
     revalidatePath("/admin/articles");
     return { success: true };
@@ -71,10 +89,16 @@ export async function updateCategory(
     description: string;
     icon: string;
     tone: string;
+    hi?: TranslationInput;
+    /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
+    seo?: unknown;
   }
 ): Promise<CategoryMutationResult> {
   try {
     await requireStaff();
+
+    const seo = cleanLocalizedSeo(data.seo);
+    if (!seo.ok) return { success: false, error: seo.error };
 
     const label = data.label.trim();
     const slug = data.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -113,13 +137,23 @@ export async function updateCategory(
         href: `/category/${slug}`,
         icon,
         tone,
+        // Hindi name: saved with the category, or removed when cleared.
+        translations: !data.hi
+          ? undefined
+          : data.hi.label?.trim()
+            ? {
+                upsert: {
+                  where: { topicId_locale: { topicId: id, locale: "hi" } },
+                  update: translationData(data.hi),
+                  create: { locale: "hi", ...translationData(data.hi) },
+                },
+              }
+            : { deleteMany: { locale: "hi" } },
+        seo: seoUpdate(seo.value, { topicId: id }),
       },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
-    revalidatePath(`/category/${slug}`);
-    revalidatePath(`/category/${existing.slug}`);
+    revalidatePath("/", "layout"); // Every public page in every language; header menus list categories too.
     revalidatePath("/admin/categories");
     revalidatePath("/admin/articles");
     return { success: true };
@@ -157,8 +191,7 @@ export async function deleteCategory(id: string): Promise<CategoryMutationResult
       where: { id },
     });
 
-    revalidatePath("/");
-    revalidatePath("/blog");
+    revalidatePath("/", "layout"); // Every public page in every language; header menus list categories too.
     revalidatePath("/admin/categories");
     revalidatePath("/admin/articles");
     return { success: true };

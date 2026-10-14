@@ -128,7 +128,7 @@ export default async function AdminDashboardPage() {
               <div key={article.id} className="flex items-center justify-between py-3.5">
                 <div className="min-w-0 flex-1 pr-4">
                   <Link
-                    href={`/articles/${article.slug}`}
+                    href={`/en/articles/${article.slug}`}
                     target="_blank"
                     className="truncate text-sm font-semibold text-text-primary hover:text-primary"
                   >

@@ -9,8 +9,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { slug } = await context.params;
 
-    const article = await prisma.article.findUnique({
-      where: { slug },
+    // Public API: drafts and archived articles are not exposed.
+    const article = await prisma.article.findFirst({
+      where: { slug, status: "PUBLISHED" },
       include: {
         topic: true,
         author: { select: { id: true, name: true, bio: true, avatar: true } },

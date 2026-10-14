@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
 import { sectionContainer } from "@/components/home/SectionHeader";
 import { ContributorForm } from "@/components/static/ContributorForm";
 import { StaticPageHero } from "@/components/static/StaticPageHero";
@@ -6,11 +7,9 @@ import { StaticSection } from "@/components/static/StaticSection";
 import { TopicGrid, type TopicGridItem } from "@/components/static/TopicGrid";
 import { Icon } from "@/components/ui/Icon";
 
-export const metadata: Metadata = {
-  title: "Write for DayTodayNews",
-  description: "Submit technology, AI, software, business and startup ideas to DayTodayNews.",
-  alternates: { canonical: "/write-for-us" },
-};
+export async function generateMetadata({ params }: PageProps<"/[lang]/write-for-us">): Promise<Metadata> {
+  return fixedPageMetadata("write-for-us", await localeFromParams(params));
+}
 
 const topics: TopicGridItem[] = [
   { label: "AI & Automation", description: "Agents, workflows and real use cases", icon: "sparkles", tone: "accent-secondary" },

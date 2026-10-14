@@ -102,7 +102,7 @@ export async function updateHeroArticles(slugs: string[]) {
     });
 
     // Revalidate home page and settings page
-    revalidatePath("/");
+    revalidatePath("/[lang]", "page"); // The home page, in every language.
     revalidatePath("/admin/settings");
 
     return { success: true, slugs };

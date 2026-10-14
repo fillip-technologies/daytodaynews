@@ -1,9 +1,11 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import Image from "next/image";
 import { CoverArt } from "@/components/blog/CoverArt";
 import { Icon } from "@/components/ui/Icon";
 import { getTopic } from "@/data/topics";
 import { cn } from "@/lib/cn";
+import { format } from "@/i18n/config";
+import { getI18n } from "@/i18n/server";
 import { formatDate } from "@/lib/format";
 import { toneStyle } from "@/lib/tones";
 import type { Article } from "@/types/article";
@@ -17,13 +19,14 @@ type TrendingPostsProps = {
 };
 
 /** Compact ranked "most read" module; works as a sidebar or on its own. */
-export function TrendingPosts({
+export async function TrendingPosts({
   posts,
-  title = "Trending Now",
+  title,
   viewAllHref = "/trending",
   className,
 }: TrendingPostsProps) {
   if (posts.length === 0) return null;
+  const { locale, t } = await getI18n();
 
   return (
     <aside
@@ -35,9 +38,9 @@ export function TrendingPosts({
           <span aria-hidden="true" className="grid size-8 place-items-center rounded-lg bg-accent/10 text-accent">
             <Icon name="flame" className="size-[18px]" />
           </span>
-          {title}
+          {title ?? t.home.trendingTitle}
         </h2>
-        {viewAllHref && <ViewAllLink label="View All" href={viewAllHref} />}
+        {viewAllHref && <ViewAllLink label={t.common.viewAll} href={viewAllHref} />}
       </header>
 
       <ol className="mt-3 divide-y divide-border">
@@ -73,7 +76,9 @@ export function TrendingPosts({
                   <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-(color:--tone)">
                     {post.category}
                   </p>
-                  <h3 className="mt-1 line-clamp-2 text-sm leading-snug font-semibold text-text-primary transition-colors duration-200 group-hover:text-primary">
+                  <h3
+                    lang={post.locale && post.locale !== locale ? post.locale : undefined}
+                    className="mt-1 line-clamp-2 text-sm leading-snug font-semibold text-text-primary transition-colors duration-200 group-hover:text-primary">
                     <Link
                       href={post.href}
                       className="outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:after:outline-2 focus-visible:after:outline-primary"
@@ -82,8 +87,8 @@ export function TrendingPosts({
                     </Link>
                   </h3>
                   <p className="mt-1.5 text-xs text-text-muted">
-                    <time dateTime={post.date}>{formatDate(post.date)}</time>
-                    {post.readTime && <> · {post.readTime} min read</>}
+                    <time dateTime={post.date}>{formatDate(post.date, locale)}</time>
+                    {post.readTime && <> · {format(t.common.minRead, { n: post.readTime })}</>}
                   </p>
                 </div>
               </article>

@@ -295,7 +295,7 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
                   <tr key={a.id} className="transition-colors hover:bg-background/40">
                     <td className="max-w-xs px-6 py-4">
                       <Link
-                        href={`/articles/${a.slug}`}
+                        href={`/en/articles/${a.slug}`}
                         target="_blank"
                         className="font-semibold text-text-primary hover:text-primary line-clamp-2"
                       >
@@ -393,7 +393,7 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
-                          href={`/articles/${a.slug}`}
+                          href={`/en/articles/${a.slug}`}
                           target="_blank"
                           title="Preview Live"
                           className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary"

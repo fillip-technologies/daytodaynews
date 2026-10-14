@@ -1,13 +1,20 @@
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "UTC",
-});
+import { localeTags, type Locale } from "@/i18n/config";
 
-/** "2026-12-12" → "Dec 12, 2026" (UTC, so server and client agree). */
-export function formatDate(isoDate: string) {
-  return dateFormatter.format(new Date(isoDate));
+const dateFormatters = new Map<Locale, Intl.DateTimeFormat>();
+
+/** "2026-12-12" → "Dec 12, 2026" / "12 दिस॰ 2026" (UTC, so server and client agree). */
+export function formatDate(isoDate: string, locale: Locale = "en") {
+  let formatter = dateFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(localeTags[locale], {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+    dateFormatters.set(locale, formatter);
+  }
+  return formatter.format(new Date(isoDate));
 }
 
 /** "Shruti Singh" → "SS" */

@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import { Icon } from "@/components/ui/Icon";
 import { getTopic } from "@/data/topics";
+import { useI18n } from "@/i18n/client";
+import { format } from "@/i18n/config";
 import { cn } from "@/lib/cn";
 import { formatDate } from "@/lib/format";
 import { toneStyle, type Tone } from "@/lib/tones";
@@ -25,6 +29,7 @@ export function ArticleCard({
   imageAspect = "wide",
   className,
 }: ArticleCardProps) {
+  const { locale, t } = useI18n();
   const tone: Tone = (article.topic && getTopic(article.topic)?.tone) || article.categoryTone;
 
   return (
@@ -32,9 +37,9 @@ export function ArticleCard({
       style={toneStyle(tone)}
       className={cn(
         "group relative flex h-full flex-col rounded-2xl border border-border bg-surface-elevated p-2",
-        "shadow-[0_1px_2px] shadow-text-primary/5 transition-[translate,box-shadow,border-color] duration-300 ease-out",
-        "hover:-translate-y-1 hover:border-(color:--tone)/30 hover:shadow-[0_22px_40px_-22px] hover:shadow-(color:--tone)/45",
-        "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+        "shadow-[0_1px_2px] shadow-text-primary/5 transition-[box-shadow,border-color] duration-300 ease-out",
+        "hover:border-(color:--tone)/30 hover:shadow-[0_22px_40px_-22px] hover:shadow-(color:--tone)/45",
+        "motion-reduce:transition-none",
         className,
       )}
     >
@@ -67,7 +72,7 @@ export function ArticleCard({
       </div>
 
       <div className="flex flex-1 flex-col px-3 pt-4 pb-3">
-        <Heading className="text-[1.0625rem] leading-snug font-semibold tracking-[-0.01em] text-balance text-text-primary transition-colors duration-200 group-hover:text-primary">
+        <Heading lang={article.locale} className="text-[1.0625rem] leading-snug font-semibold tracking-[-0.01em] text-balance text-text-primary transition-colors duration-200 group-hover:text-primary">
           <Link
             href={article.href}
             className="outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"
@@ -76,17 +81,17 @@ export function ArticleCard({
           </Link>
         </Heading>
         {showExcerpt && article.description && (
-          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-text-secondary">
+          <p lang={article.locale} className="mt-2 line-clamp-2 text-sm leading-relaxed text-text-secondary">
             {article.description}
           </p>
         )}
 
         <div className="mt-auto flex items-center justify-between gap-3 pt-5">
           <p className="min-w-0 text-xs leading-tight text-text-muted">
-            <span className="block truncate font-medium text-text-secondary">By {article.author}</span>
+            <span className="block truncate font-medium text-text-secondary">{format(t.common.by, { author: article.author })}</span>
             <span className="mt-1 block truncate">
-              <time dateTime={article.date}>{formatDate(article.date)}</time>
-              {article.readTime && <> · {article.readTime} min read</>}
+              <time dateTime={article.date}>{formatDate(article.date, locale)}</time>
+              {article.readTime && <> · {format(t.common.minRead, { n: article.readTime })}</>}
             </span>
           </p>
           <span

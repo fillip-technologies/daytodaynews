@@ -1,18 +1,34 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { footerNavigation } from "@/config/footerNavigation";
+import { exploreTopics, footerGroups, type FooterGroup } from "@/config/footerNavigation";
+import type { NavItem } from "@/config/navigation";
+import { useI18n } from "@/i18n/client";
 import { toneStyle } from "@/lib/tones";
 import { FooterBottomBar } from "./FooterBottomBar";
 import { FooterBrand } from "./FooterBrand";
 import { FooterLinks } from "./FooterLinks";
 
-export function Footer() {
-  const pathname = usePathname();
+/** Site footer; `sections` are the categories (in the page's language) for the Explore column. */
+export function Footer({ sections = [] }: { sections?: NavItem[] }) {
+  const { t } = useI18n();
 
-  if (pathname?.startsWith("/admin")) {
-    return null;
-  }
+  const groups: FooterGroup[] = [
+    {
+      id: "explore",
+      title: t.footer.groups.explore,
+      tone: "accent-secondary",
+      links: exploreTopics.flatMap((slug) => {
+        const section = sections.find((item) => item.category === slug);
+        return section ? [{ label: section.label, href: section.href }] : [];
+      }),
+    },
+    ...footerGroups.map((group) => ({
+      id: group.id,
+      title: t.footer.groups[group.id],
+      tone: group.tone,
+      links: group.links.map((link) => ({ label: t.footer.links[link.key], href: link.href })),
+    })),
+  ];
 
   return (
     <footer className="relative isolate overflow-hidden border-t border-border bg-surface">
@@ -32,7 +48,7 @@ export function Footer() {
           <FooterBrand />
         </div>
         <div className="border-t border-border py-10 sm:py-12">
-          <FooterLinks groups={footerNavigation} />
+          <FooterLinks groups={groups} />
         </div>
         <FooterBottomBar />
       </div>

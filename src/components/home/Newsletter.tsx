@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { useI18n } from "@/i18n/client";
 import { toneColor, toneStyle } from "@/lib/tones";
 import styles from "./home.module.css";
 import { sectionContainer } from "./SectionHeader";
@@ -16,6 +17,7 @@ type NewsletterProps = {
 };
 
 export function Newsletter({ onSubscribe }: NewsletterProps) {
+  const { t } = useI18n();
   const [status, setStatus] = useState<"idle" | "submitting" | "done">("idle");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -50,17 +52,16 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
             <div>
               <p className="inline-flex items-center gap-2 rounded-full border border-surface-elevated bg-surface-elevated/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-accent-secondary">
                 <Icon name="mail" className="size-4" />
-                The weekly brief
+                {t.newsletter.eyebrow}
               </p>
               <h2
                 id="newsletter-title"
                 className="mt-5 text-3xl leading-[1.1] font-semibold tracking-[-0.03em] text-text-primary sm:text-4xl lg:text-[2.75rem]"
               >
-                Stay ahead of what&apos;s next.
+                {t.newsletter.title}
               </h2>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg">
-                Weekly insights on AI, software, automation and the technologies shaping modern
-                businesses.
+                {t.newsletter.description}
               </p>
 
               {status === "done" ? (
@@ -70,12 +71,12 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
                       <path d="m5 12 5 5 9-10" />
                     </svg>
                   </span>
-                  Thanks for subscribing! You are now on our weekly brief.
+                  {t.newsletter.thanks}
                 </p>
               ) : (
                 <form onSubmit={handleSubmit} className="mt-7 flex max-w-lg flex-col gap-3 sm:flex-row">
                   <label htmlFor="newsletter-email" className="sr-only">
-                    Email address
+                    {t.newsletter.emailLabel}
                   </label>
                   <input
                     id="newsletter-email"
@@ -83,7 +84,7 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
                     type="email"
                     required
                     autoComplete="email"
-                    placeholder="Your email address"
+                    placeholder={t.newsletter.emailPlaceholder}
                     className="h-12 w-full min-w-0 rounded-full border border-border bg-surface-elevated px-5 sm:flex-1 text-[0.9375rem] text-text-primary shadow-sm transition-[border-color,box-shadow] placeholder:text-text-muted hover:border-text-muted/40 focus:border-primary focus:shadow-[0_0_0_4px] focus:shadow-primary/15 focus:outline-none"
                   />
                   <button
@@ -91,7 +92,7 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
                     disabled={status === "submitting"}
                     className="group inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-[0.9375rem] font-semibold text-surface-elevated shadow-md shadow-accent/25 transition-[translate,box-shadow] duration-200 hover:-translate-y-px hover:shadow-lg hover:shadow-accent/35 disabled:opacity-70 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:hover:translate-y-0"
                   >
-                    Subscribe
+                    {t.newsletter.submit}
                     <Icon
                       name="arrowRight"
                       className="size-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
@@ -99,10 +100,10 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
                   </button>
                 </form>
               )}
-              <p className="mt-3 text-xs text-text-muted">Free, weekly and practical. Unsubscribe anytime.</p>
+              <p className="mt-3 text-xs text-text-muted">{t.newsletter.note}</p>
             </div>
 
-            <NewsletterVisual />
+            <NewsletterVisual everyFriday={t.newsletter.everyFriday} />
           </div>
         </div>
       </div>
@@ -116,7 +117,7 @@ const white = (opacity = 1) =>
     : `color-mix(in srgb, var(--color-surface-elevated) ${opacity * 100}%, transparent)`;
 
 /** Envelope with issue cards fanning out of it. */
-function NewsletterVisual() {
+function NewsletterVisual({ everyFriday }: { everyFriday: string }) {
   const issues = [
     { x: 70, y: 60, rotate: -10, tone: toneColor["accent-secondary"], cls: styles.floatDelayed },
     { x: 196, y: 44, rotate: 8, tone: toneColor.accent, cls: styles.float },
@@ -161,7 +162,7 @@ function NewsletterVisual() {
         <rect x={286} y={96} width={104} height={34} rx={17} style={{ fill: white() }} />
         <circle cx={304} cy={113} r={7} style={{ fill: "var(--color-success)" }} />
         <text x={318} y={117} fontSize={11.5} fontWeight={600} style={{ fill: "var(--color-text-primary)" }}>
-          Every Friday
+          {everyFriday}
         </text>
       </g>
       <g className={styles.floatDelayed}>

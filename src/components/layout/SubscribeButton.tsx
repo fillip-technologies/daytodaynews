@@ -1,6 +1,9 @@
-import Link from "next/link";
+"use client";
+
+import Link from "@/i18n/Link";
 import { Icon } from "@/components/ui/Icon";
 import { subscribeHref } from "@/config/navigation";
+import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/cn";
 
 type SubscribeButtonProps = {
@@ -12,12 +15,13 @@ type SubscribeButtonProps = {
 };
 
 export function SubscribeButton({
-  label = "Subscribe",
+  label,
   href = subscribeHref,
   size = "sm",
   className,
   onClick,
 }: SubscribeButtonProps) {
+  const { t } = useI18n();
   return (
     <Link
       href={href}
@@ -31,7 +35,7 @@ export function SubscribeButton({
         className,
       )}
     >
-      {label}
+      {label ?? t.header.subscribe}
       <Icon
         name="arrowRight"
         className="size-4 transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none"

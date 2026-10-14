@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/i18n/Link";
 import type { MouseEvent } from "react";
 import type { Topic } from "@/data/topics";
 import { cn } from "@/lib/cn";
@@ -11,15 +11,17 @@ type BlogFiltersProps = {
   onSelect?: (category: string | null) => void;
   /** Builds the crawlable URL for each chip. */
   hrefFor: (category: string | null) => string;
+  /** Text in the page's language (rendered from server and client parents alike). */
+  labels: { all: string; nav: string };
 };
 
 /**
  * Category chips rendered as real links (crawlable, open-in-new-tab friendly);
  * plain clicks filter in place without a page load.
  */
-export function BlogFilters({ topics, active, onSelect, hrefFor }: BlogFiltersProps) {
+export function BlogFilters({ topics, active, onSelect, hrefFor, labels }: BlogFiltersProps) {
   const options: Array<{ value: string | null; label: string; tone: Tone }> = [
-    { value: null, label: "All", tone: "primary" },
+    { value: null, label: labels.all, tone: "primary" },
     ...topics.map((topic) => ({ value: topic.slug, label: topic.label, tone: topic.tone })),
   ];
 
@@ -30,12 +32,12 @@ export function BlogFilters({ topics, active, onSelect, hrefFor }: BlogFiltersPr
   }
 
   return (
-    <nav aria-label="Article categories">
+    <nav aria-label={labels.nav}>
       <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pt-1 pb-2 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:mx-0 lg:flex-wrap lg:px-0">
         {options.map((option) => {
           const selected = option.value === active;
           return (
-            <li key={option.label} style={toneStyle(option.tone)} className="shrink-0">
+            <li key={option.value ?? "all"} style={toneStyle(option.tone)} className="shrink-0">
               <Link
                 href={hrefFor(option.value)}
                 scroll={false}

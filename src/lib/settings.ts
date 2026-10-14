@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { primaryNavigation, type NavItem } from "@/config/navigation";
+import type { Locale } from "@/i18n/config";
 import { getTopics } from "./articles";
 
 export const DEFAULT_HEADER_CATEGORY_SLUGS = [
@@ -56,11 +57,11 @@ export async function getHeaderCategorySlugs(): Promise<string[]> {
   return DEFAULT_HEADER_CATEGORY_SLUGS;
 }
 
-export async function getHeaderNavigation(): Promise<NavItem[]> {
+export async function getHeaderNavigation(locale: Locale = "en"): Promise<NavItem[]> {
   try {
     const [slugs, allTopics] = await Promise.all([
       getHeaderCategorySlugs(),
-      getTopics(),
+      getTopics(locale),
     ]);
 
     const topicMap = new Map(allTopics.map((t) => [t.slug, t]));
@@ -77,7 +78,8 @@ export async function getHeaderNavigation(): Promise<NavItem[]> {
           category: topic.slug,
           icon: topic.icon,
           description: topic.description,
-          showFrom: i < 3 ? "md" : "lg",
+          // What fits beside the search, Subscribe and menu buttons at each width.
+          showFrom: i < 3 ? "md" : i < 4 ? "lg" : "xl",
         });
       }
     }

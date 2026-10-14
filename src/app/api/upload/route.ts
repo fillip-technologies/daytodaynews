@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { cloudinary } from "@/lib/cloudinary";
+import { ALLOWED_IMAGE_FORMATS, imageUploadError } from "@/lib/image-upload";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,10 +11,10 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    const file = formData.get("file");
+    const invalid = imageUploadError(file);
+    if (invalid || !(file instanceof File)) {
+      return NextResponse.json({ error: invalid ?? "No file provided" }, { status: 400 });
     }
 
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
     const uploadResponse = await cloudinary.uploader.upload(base64Data, {
       folder: "daytodaynews/articles",
       resource_type: "image",
+      allowed_formats: ALLOWED_IMAGE_FORMATS,
     });
 
     return NextResponse.json({
