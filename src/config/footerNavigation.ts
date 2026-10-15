@@ -56,14 +56,53 @@ export const footerGroups: Array<{
   },
 ];
 
-export const socialNetworks = ["linkedin", "x", "instagram", "youtube"] as const;
+// Networks the footer has an icon for. The profiles themselves (which ones, in
+// what order) are a list edited under Admin → SEO → Brand & Credits; "website"
+// covers anything else with a globe icon.
+export const socialNetworks = [
+  "facebook",
+  "instagram",
+  "linkedin",
+  "x",
+  "youtube",
+  "threads",
+  "whatsapp",
+  "telegram",
+  "pinterest",
+  "tiktok",
+  "website",
+] as const;
 export type SocialNetwork = (typeof socialNetworks)[number];
 
-// The profile addresses are set under Admin → SEO → Brand & Credits; networks
-// without one are hidden. Accessible names come from the dictionary (footer.social).
+/** One footer social icon: the network decides the icon, `url` is the profile. */
+export type SocialLink = { network: SocialNetwork; url: string };
+
+/** Brand names, used in the admin and in each icon's accessible name. */
+export const socialNetworkNames: Record<SocialNetwork, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
+  x: "X (Twitter)",
+  youtube: "YouTube",
+  threads: "Threads",
+  whatsapp: "WhatsApp",
+  telegram: "Telegram",
+  pinterest: "Pinterest",
+  tiktok: "TikTok",
+  website: "Other website",
+};
+
+/** Hover color of each icon. */
 export const socialTones: Record<SocialNetwork, Tone> = {
+  facebook: "primary",
+  instagram: "pink",
   linkedin: "primary",
   x: "accent-secondary",
-  instagram: "pink",
   youtube: "accent",
+  threads: "accent-secondary",
+  whatsapp: "primary",
+  telegram: "primary",
+  pinterest: "accent",
+  tiktok: "pink",
+  website: "accent-secondary",
 };

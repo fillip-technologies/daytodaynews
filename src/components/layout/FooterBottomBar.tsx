@@ -1,14 +1,15 @@
 "use client";
 
+import type { SocialLink } from "@/config/footerNavigation";
 import { useI18n } from "@/i18n/client";
 import { format } from "@/i18n/config";
 import { BackToTop } from "./BackToTop";
-import { FooterSocials, type FooterSocialLink } from "./FooterSocials";
+import { FooterSocials } from "./FooterSocials";
 
 /** The company that designs and manages the site (Admin → SEO → Brand & Credits). */
 export type FooterCredit = { label: string; name: string; url: string; logoUrl: string; logoHeight: number };
 
-export function FooterBottomBar({ credit, socials }: { credit: FooterCredit | null; socials: FooterSocialLink[] }) {
+export function FooterBottomBar({ credit, socials }: { credit: FooterCredit | null; socials: SocialLink[] }) {
   const { t } = useI18n();
   return (
     <div className="flex flex-col gap-5 border-t border-border py-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">

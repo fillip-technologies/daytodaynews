@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { updatePageSeo, updateSiteSeo } from "@/actions/seo";
 import { uploadCoverImage } from "@/actions/upload";
 import { SeoFields } from "@/components/admin/SeoFields";
+import { SocialIcon } from "@/components/layout/SocialIcon";
 import { Icon } from "@/components/ui/Icon";
-import { socialNetworks, type SocialNetwork } from "@/config/footerNavigation";
+import { socialNetworkNames, socialNetworks, type SocialLink, type SocialNetwork } from "@/config/footerNavigation";
 import type { Locale } from "@/i18n/config";
 import {
   articleSchemaTypes,
@@ -87,12 +88,100 @@ function Notice({ message }: { message: { type: "success" | "error"; text: strin
   );
 }
 
-const SOCIAL_LABELS: Record<SocialNetwork, string> = {
-  linkedin: "LinkedIn",
-  x: "X (Twitter)",
-  instagram: "Instagram",
-  youtube: "YouTube",
+const SOCIAL_PLACEHOLDERS: Record<SocialNetwork, string> = {
+  facebook: "https://www.facebook.com/yourpage",
+  instagram: "https://www.instagram.com/yourhandle",
+  linkedin: "https://www.linkedin.com/company/yourcompany",
+  x: "https://x.com/yourhandle",
+  youtube: "https://www.youtube.com/@yourchannel",
+  threads: "https://www.threads.com/@yourhandle",
+  whatsapp: "https://wa.me/91XXXXXXXXXX",
+  telegram: "https://t.me/yourchannel",
+  pinterest: "https://www.pinterest.com/yourprofile",
+  tiktok: "https://www.tiktok.com/@yourhandle",
+  website: "https://…",
 };
+
+const iconButton =
+  "grid size-9 shrink-0 place-items-center rounded-lg border border-border text-text-secondary hover:bg-background hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-secondary";
+
+/** The footer's social icons as an ordered list: pick a network, paste the link; add, reorder or remove rows. */
+function SocialLinksEditor({ value, onChange }: { value: SocialLink[]; onChange: (next: SocialLink[]) => void }) {
+  const update = (index: number, patch: Partial<SocialLink>) =>
+    onChange(value.map((link, i) => (i === index ? { ...link, ...patch } : link)));
+  const move = (index: number, by: -1 | 1) => {
+    const next = [...value];
+    const [link] = next.splice(index, 1);
+    next.splice(index + by, 0, link);
+    onChange(next);
+  };
+  // A new row starts on the first network not used yet.
+  const nextNetwork = socialNetworks.find((n) => !value.some((link) => link.network === n)) ?? "website";
+
+  return (
+    <fieldset className="space-y-2">
+      <legend className={label}>Social profiles (footer icons)</legend>
+      <p className={hint}>
+        Shown as icons in the footer in this order, and given to search engines. Rows without a link are ignored.
+      </p>
+      {value.length === 0 && (
+        <p className="rounded-xl border border-dashed border-border p-3 text-center text-[11px] text-text-muted">
+          No profiles yet, so the footer hides its &quot;Follow us&quot; row.
+        </p>
+      )}
+      <ol className="space-y-2">
+        {value.map((link, index) => (
+          <li key={index} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-2 sm:flex-nowrap">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-elevated text-text-secondary">
+              <SocialIcon network={link.network} className="size-4" />
+            </span>
+            <select
+              aria-label={`Profile ${index + 1}: network`}
+              value={link.network}
+              onChange={(e) => update(index, { network: e.target.value as SocialNetwork })}
+              className={`${input} mt-0 w-36 shrink-0`}
+            >
+              {socialNetworks.map((network) => (
+                <option key={network} value={network}>{socialNetworkNames[network]}</option>
+              ))}
+            </select>
+            <input
+              aria-label={`Profile ${index + 1}: ${socialNetworkNames[link.network]} link`}
+              value={link.url}
+              onChange={(e) => update(index, { url: e.target.value })}
+              placeholder={SOCIAL_PLACEHOLDERS[link.network]}
+              className={`${input} order-last mt-0 min-w-0 basis-full sm:order-none sm:basis-auto sm:flex-1`}
+            />
+            <div className="ml-auto flex gap-1 sm:ml-0">
+              <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move profile ${index + 1} up`} className={iconButton}>
+                <Icon name="arrowRight" className="size-3.5 -rotate-90" />
+              </button>
+              <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} aria-label={`Move profile ${index + 1} down`} className={iconButton}>
+                <Icon name="arrowRight" className="size-3.5 rotate-90" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((_, i) => i !== index))}
+                aria-label={`Remove profile ${index + 1}`}
+                className={`${iconButton} hover:text-error`}
+              >
+                <Icon name="close" className="size-3.5" />
+              </button>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <button
+        type="button"
+        onClick={() => onChange([...value, { network: nextNetwork, url: "" }])}
+        disabled={value.length >= 20}
+        className="inline-flex h-9 items-center rounded-xl border border-dashed border-border px-3 text-xs font-semibold text-primary hover:bg-primary/5 disabled:opacity-50"
+      >
+        + Add social profile
+      </button>
+    </fieldset>
+  );
+}
 
 const ARTICLE_TYPE_LABELS: Record<ArticleSchemaType, string> = {
   NewsArticle: "NewsArticle: news & editorial (recommended)",
@@ -532,24 +621,7 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
                 ))}
               </select>
             </div>
-            <fieldset className="space-y-2">
-              <legend className={label}>Social profiles</legend>
-              <p className={hint}>Shown as icons in the footer. Leave a network empty to hide it.</p>
-              {socialNetworks.map((network) => (
-                <div key={network} className="flex items-center gap-3">
-                  <label htmlFor={`seo-social-${network}`} className="w-24 shrink-0 text-xs text-text-secondary">
-                    {SOCIAL_LABELS[network]}
-                  </label>
-                  <input
-                    id={`seo-social-${network}`}
-                    value={site.publisher.socials[network]}
-                    onChange={(e) => setPublisher({ socials: { ...site.publisher.socials, [network]: e.target.value } })}
-                    placeholder="https://…"
-                    className={`${input} mt-0`}
-                  />
-                </div>
-              ))}
-            </fieldset>
+            <SocialLinksEditor value={site.publisher.socials} onChange={(socials) => setPublisher({ socials })} />
             <div>
               <label htmlFor="seo-publisher-sameas" className={label}>Other official profiles</label>
               <textarea
@@ -557,10 +629,13 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
                 rows={3}
                 value={site.publisher.sameAs.join("\n")}
                 onChange={(e) => setPublisher({ sameAs: e.target.value.split("\n") })}
-                placeholder={"https://www.facebook.com/…\nhttps://news.google.com/publications/…"}
+                placeholder={"https://news.google.com/publications/…\nhttps://www.crunchbase.com/organization/…"}
                 className={`${textarea} font-mono`}
               />
-              <p className={hint}>One https:// address per line (Facebook, Google News, Crunchbase…). Not shown on the site.</p>
+              <p className={hint}>
+                For search engines only, not shown on the site (Google News, Crunchbase, Wikipedia…). One https:// address
+                per line. To show a profile as a footer icon, add it under Social profiles above.
+              </p>
             </div>
           </div>
 

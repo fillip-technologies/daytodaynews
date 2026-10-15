@@ -75,12 +75,7 @@ export const hi: Dictionary = {
     },
     copyright: "© {year} DayTodayNews. सर्वाधिकार सुरक्षित।",
     followUs: "हमें फ़ॉलो करें",
-    social: {
-      linkedin: "LinkedIn पर DayTodayNews",
-      x: "X पर DayTodayNews",
-      instagram: "Instagram पर DayTodayNews",
-      youtube: "YouTube पर DayTodayNews",
-    },
+    socialLabel: "{network} पर DayTodayNews",
     backToTop: "ऊपर जाएँ",
   },
   home: {

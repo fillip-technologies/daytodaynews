@@ -55,7 +55,7 @@ export function siteGraph(site: SiteSeo, locale: Locale) {
       description: site.defaultDescription[locale] || undefined,
       email: publisher.email || undefined,
       foundingDate: publisher.foundingDate || undefined,
-      sameAs: listOrUndefined([...Object.values(publisher.socials).filter(Boolean), ...publisher.sameAs]),
+      sameAs: listOrUndefined([...publisher.socials.map((social) => social.url), ...publisher.sameAs]),
       publishingPrinciples: absoluteUrl(site, localizePath("/about", "en")),
       parentOrganization: developer?.ownsSite ? devRef : undefined,
     },

@@ -1,13 +1,12 @@
 "use client";
 
-import { exploreTopics, footerGroups, type FooterGroup } from "@/config/footerNavigation";
+import { exploreTopics, footerGroups, type FooterGroup, type SocialLink } from "@/config/footerNavigation";
 import type { NavItem } from "@/config/navigation";
 import { useI18n } from "@/i18n/client";
 import { toneStyle } from "@/lib/tones";
 import { FooterBottomBar, type FooterCredit } from "./FooterBottomBar";
 import { FooterBrand } from "./FooterBrand";
 import { FooterLinks } from "./FooterLinks";
-import type { FooterSocialLink } from "./FooterSocials";
 
 type FooterProps = {
   /** The categories (in the page's language) for the Explore column. */
@@ -15,7 +14,7 @@ type FooterProps = {
   /** "Designed & Managed by" credit from Admin → SEO → Brand & Credits, or null when off. */
   credit?: FooterCredit | null;
   /** Social profiles set in admin; empty hides the row. */
-  socials?: FooterSocialLink[];
+  socials?: SocialLink[];
 };
 
 export function Footer({ sections = [], credit = null, socials = [] }: FooterProps) {

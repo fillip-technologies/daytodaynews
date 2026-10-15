@@ -1,4 +1,4 @@
-import { socialNetworks, type SocialNetwork } from "@/config/footerNavigation";
+import { socialNetworkNames, socialNetworks, type SocialLink } from "@/config/footerNavigation";
 import { locales, type Locale } from "@/i18n/config";
 import { cleanLine, isEmail } from "@/lib/validation";
 import { cleanSeoUrl, SEO_LIMITS } from "./validate";
@@ -35,9 +35,9 @@ export type PublisherSettings = {
   email: string;
   /** "2025" or "2025-01-15", or empty. */
   foundingDate: string;
-  /** Footer icons and structured-data profiles; empty networks are hidden. */
-  socials: Record<SocialNetwork, string>;
-  /** Other official profiles (Google News, Facebook, Crunchbase…), https URLs. */
+  /** Footer social icons, in display order; also given to search engines as profiles. */
+  socials: SocialLink[];
+  /** Profiles given to search engines only, not shown on the site (Google News, Crunchbase…). */
   sameAs: string[];
   /** schema.org type of every article page. */
   articleType: ArticleSchemaType;
@@ -113,7 +113,7 @@ export const defaultSiteSeo: SiteSeo = {
     logoSize: { header: 56, headerMobile: 48, footer: 56 },
     email: "",
     foundingDate: "",
-    socials: { linkedin: "", x: "", instagram: "", youtube: "" },
+    socials: [],
     sameAs: [],
     articleType: "NewsArticle",
   },
@@ -218,6 +218,30 @@ function clampInt(value: unknown, limits: { min: number; max: number }, fallback
 
 const PIXEL_SIZE = { min: 1, max: 20000 };
 
+/**
+ * Footer social profiles in order. Rows without an address are dropped, and the
+ * same address is kept once. Older settings stored one address per network
+ * ({ linkedin: "https://…" }); those are read as a list.
+ */
+function cleanSocials(value: unknown): Result<SocialLink[]> {
+  const list = Array.isArray(value)
+    ? value
+    : value && typeof value === "object"
+      ? Object.entries(value).map(([network, url]) => ({ network, url }))
+      : [];
+  const links: SocialLink[] = [];
+  for (const item of list) {
+    const row = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+    const network = socialNetworks.find((n) => n === row.network);
+    const url = webUrl(row.url, `${network ? socialNetworkNames[network] : "Social"} profile`);
+    if (!url.ok) return url;
+    if (!url.value || links.some((link) => link.url === url.value)) continue;
+    if (!network) return { ok: false, error: "Choose a network for each social profile." };
+    links.push({ network, url: url.value });
+  }
+  return { ok: true, value: links.slice(0, 20) };
+}
+
 function cleanPublisher(input: unknown, current: PublisherSettings): Result<PublisherSettings> {
   const raw = { ...current, ...(input && typeof input === "object" ? input : {}) } as Record<string, unknown>;
 
@@ -248,13 +272,8 @@ function cleanPublisher(input: unknown, current: PublisherSettings): Result<Publ
     return { ok: false, error: "Founded must be a year (2025) or a date (2025-01-15)." };
   }
 
-  const socialsRaw = (raw.socials && typeof raw.socials === "object" ? raw.socials : {}) as Record<string, unknown>;
-  const socials = { ...current.socials };
-  for (const network of socialNetworks) {
-    const url = webUrl(socialsRaw[network] ?? current.socials[network], `${network} profile`);
-    if (!url.ok) return url;
-    socials[network] = url.value;
-  }
+  const socials = cleanSocials(raw.socials);
+  if (!socials.ok) return socials;
 
   const sameAs = webUrls(raw.sameAs, "Other profiles");
   if (!sameAs.ok) return sameAs;
@@ -263,7 +282,7 @@ function cleanPublisher(input: unknown, current: PublisherSettings): Result<Publ
 
   return {
     ok: true,
-    value: { ...logoFile, logoSize, email, foundingDate, socials, sameAs: sameAs.value, articleType },
+    value: { ...logoFile, logoSize, email, foundingDate, socials: socials.value, sameAs: sameAs.value, articleType },
   };
 }
 

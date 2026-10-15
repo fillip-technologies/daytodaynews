@@ -74,12 +74,8 @@ export const en = {
     },
     copyright: "© {year} DayTodayNews. All rights reserved.",
     followUs: "Follow Us",
-    social: {
-      linkedin: "DayTodayNews on LinkedIn",
-      x: "DayTodayNews on X",
-      instagram: "DayTodayNews on Instagram",
-      youtube: "DayTodayNews on YouTube",
-    },
+    /** Accessible name of a footer social icon; {network} is e.g. "Facebook". */
+    socialLabel: "DayTodayNews on {network}",
     backToTop: "Back to top",
   },
   home: {

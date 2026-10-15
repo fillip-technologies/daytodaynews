@@ -5,7 +5,6 @@ import { BrandProvider } from "@/components/layout/BrandProvider";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { socialNetworks } from "@/config/footerNavigation";
 import { I18nProvider } from "@/i18n/client";
 import { isLocale, locales } from "@/i18n/config";
 import { dictionaries } from "@/i18n/dictionaries";
@@ -64,9 +63,6 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
         logoHeight: developer.logoHeight,
       }
     : null;
-  const socials = socialNetworks
-    .filter((network) => publisher.socials[network])
-    .map((network) => ({ network, href: publisher.socials[network] }));
 
   return (
     <html lang={lang} className={`${fontVariables} h-full antialiased`}>
@@ -76,7 +72,7 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
           <BrandProvider logo={logo}>
             <Header items={navigation.header} sections={navigation.sections} />
             {children}
-            <Footer sections={navigation.sections} credit={credit} socials={socials} />
+            <Footer sections={navigation.sections} credit={credit} socials={publisher.socials} />
           </BrandProvider>
         </I18nProvider>
         <Analytics gaId={site.analytics.gaId} gtmId={site.analytics.gtmId} />
