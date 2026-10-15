@@ -8,6 +8,8 @@ import { TopicGrid, type TopicGridItem } from "@/components/static/TopicGrid";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { categories } from "@/data/categories";
 import { getTopic } from "@/data/topics";
+import { getSiteSeo } from "@/lib/seo/site";
+import { siteDeveloper } from "@/lib/seo/structured-data";
 import { toneStyle, type Tone } from "@/lib/tones";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/about">): Promise<Metadata> {
@@ -58,7 +60,10 @@ const commitments = [
   "Any sponsored or commercial content will be clearly labelled.",
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  // The page text is English-only (see lib/seo/pages), so the credit is too.
+  const developer = siteDeveloper(await getSiteSeo());
+
   return (
     <main className="flex-1">
       <StaticPageHero
@@ -149,6 +154,32 @@ export default function AboutPage() {
           </ul>
         </div>
       </StaticSection>
+
+      {developer?.showOnAbout && (
+        <StaticSection id="team-title" title={`${developer.creditLabel.en} ${developer.name}`}>
+          <div className="flex flex-col gap-6 rounded-3xl border border-border bg-surface-elevated p-6 sm:flex-row sm:items-center sm:gap-10 sm:p-10">
+            {developer.logoUrl && (
+              // Any address an admin enters, so a plain <img> rather than next/image (which needs known hosts).
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={developer.logoUrl} alt={developer.name} loading="lazy" className="h-12 w-auto shrink-0 self-start sm:h-14 sm:self-center" />
+            )}
+            <div className="space-y-4">
+              {developer.description.en && (
+                <p className="text-lg leading-8 text-text-secondary">{developer.description.en}</p>
+              )}
+              <a
+                href={developer.url}
+                target="_blank"
+                rel="noopener"
+                className="group inline-flex items-center gap-1.5 rounded-md font-semibold text-primary transition-colors hover:text-primary-hover outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                Visit {developer.name}
+                <Icon name="arrowRight" className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none" />
+              </a>
+            </div>
+          </div>
+        </StaticSection>
+      )}
 
       <section aria-labelledby="about-cta-title" className="pt-6 pb-20 sm:pb-24">
         <div className={sectionContainer}>

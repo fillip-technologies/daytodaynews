@@ -5,14 +5,16 @@ import { notFound } from "next/navigation";
 import { CoverArt } from "@/components/blog/CoverArt";
 import { ArticleContent } from "@/components/article/ArticleContent";
 import { Newsletter } from "@/components/home/Newsletter";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Icon } from "@/components/ui/Icon";
-import { defaultLocale, format, isLocale, locales, type Locale } from "@/i18n/config";
+import { defaultLocale, format, isLocale, localizePath, locales, type Locale } from "@/i18n/config";
 import { dictionaries } from "@/i18n/dictionaries";
 import { getArticleBySlug, getPopularInCategory } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildMetadata, canonicalPath, splitKeywords } from "@/lib/seo/metadata";
 import { getSiteSeo } from "@/lib/seo/site";
+import { absoluteUrl, articleNode, breadcrumbList, graph } from "@/lib/seo/structured-data";
 import { toneStyle, type Tone } from "@/lib/tones";
 import type { CoverPattern, CoverSpec } from "@/types/article";
 
@@ -22,6 +24,9 @@ async function readParams(params: Props["params"]) {
   const { lang, slug } = await params;
   return { slug, locale: (isLocale(lang) ? lang : defaultLocale) as Locale };
 }
+
+/** Until every language exists, all copies point at the English original. */
+const isFullyTranslated = (translatedLocales: Locale[]) => locales.every((l) => translatedLocales.includes(l));
 
 /** Published articles are public; drafts and archived ones only for signed-in staff (preview). */
 async function canViewArticle(status: string) {
@@ -39,8 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return buildMetadata({
     locale,
     path: `/articles/${slug}`,
-    // Until every language exists, all copies point at the English original.
-    translated: locales.every((l) => article.translatedLocales.includes(l)),
+    translated: isFullyTranslated(article.translatedLocales),
     site,
     seo: article.seo,
     auto: {
@@ -63,12 +67,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArticlePage({ params }: Props) {
   const { slug, locale } = await readParams(params);
   const t = dictionaries[locale];
-  const article = await getArticleBySlug(slug, locale);
+  const [article, site] = await Promise.all([getArticleBySlug(slug, locale), getSiteSeo()]);
 
   if (!article || !(await canViewArticle(article.status))) {
     notFound();
   }
   const isDraft = article.status !== "PUBLISHED";
+
+  const path = `/articles/${slug}`;
+  const pageUrl = absoluteUrl(site, canonicalPath(path, locale, isFullyTranslated(article.translatedLocales), article.seo));
+  const structuredData = graph(
+    articleNode(site, locale, {
+      url: pageUrl,
+      title: article.title,
+      description: article.description,
+      image: article.seo?.ogImage || article.imageUrl,
+      publishedAt: article.publishedAt,
+      updatedAt: article.updatedAt,
+      authorName: article.author?.name || article.authorName,
+      section: article.topic.label,
+      keywords: splitKeywords(article.seo?.keywords),
+      textLocale: article.contentLocale,
+    }),
+    breadcrumbList([
+      { name: t.common.home, url: absoluteUrl(site, localizePath("/", locale)) },
+      { name: article.topic.label, url: absoluteUrl(site, localizePath(`/category/${article.topicSlug}`, locale)) },
+      { name: article.title, url: pageUrl },
+    ]),
+  );
 
   const related = await getPopularInCategory(article.topicSlug, 3, locale);
   const otherArticles = related.filter((r) => r.slug !== slug).slice(0, 2);
@@ -92,6 +118,7 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <main className="flex-1">
+      {!isDraft && <JsonLd data={structuredData} />}
       {/* Atmosphere background */}
       <div className="relative isolate">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem] overflow-hidden">

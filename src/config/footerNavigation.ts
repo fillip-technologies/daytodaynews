@@ -56,13 +56,14 @@ export const footerGroups: Array<{
   },
 ];
 
-export type SocialNetwork = "linkedin" | "x" | "instagram" | "youtube";
+export const socialNetworks = ["linkedin", "x", "instagram", "youtube"] as const;
+export type SocialNetwork = (typeof socialNetworks)[number];
 
-// TODO: replace the placeholder hrefs with the real DayTodayNews profiles.
-// Accessible names come from the dictionary (footer.social).
-export const socialLinks: Array<{ network: SocialNetwork; href: string; tone: Tone }> = [
-  { network: "linkedin", href: "#", tone: "primary" },
-  { network: "x", href: "#", tone: "accent-secondary" },
-  { network: "instagram", href: "#", tone: "pink" },
-  { network: "youtube", href: "#", tone: "accent" },
-];
+// The profile addresses are set under Admin → SEO → Brand & Credits; networks
+// without one are hidden. Accessible names come from the dictionary (footer.social).
+export const socialTones: Record<SocialNetwork, Tone> = {
+  linkedin: "primary",
+  x: "accent-secondary",
+  instagram: "pink",
+  youtube: "accent",
+};

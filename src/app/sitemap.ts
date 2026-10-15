@@ -18,7 +18,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const absolute = (path: string, locale: Locale) => new URL(localizePath(path, locale), site.siteUrl).toString();
 
   let topics: Array<{ id: string; slug: string; updatedAt: Date }> = [];
-  let articles: Array<{ id: string; slug: string; updatedAt: Date; translations: Array<{ locale: string }> }> = [];
+  let articles: Array<{
+    id: string;
+    slug: string;
+    updatedAt: Date;
+    imageUrl: string | null;
+    translations: Array<{ locale: string }>;
+  }> = [];
   let hidden = new Set<string>();
   try {
     const [topicRows, articleRows, noIndexRows] = await Promise.all([
@@ -26,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       prisma.article.findMany({
         where: { status: "PUBLISHED" },
         orderBy: { publishedAt: "desc" },
-        select: { id: true, slug: true, updatedAt: true, translations: { select: { locale: true } } },
+        select: { id: true, slug: true, updatedAt: true, imageUrl: true, translations: { select: { locale: true } } },
       }),
       prisma.seoMeta.findMany({
         where: { noIndex: true },
@@ -79,6 +85,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: article.updatedAt,
       changeFrequency: "monthly",
       priority: 0.8,
+      // Cover photos in Google Images point back to the article.
+      images: article.imageUrl ? [new URL(article.imageUrl, site.siteUrl).toString()] : undefined,
     });
   }
 

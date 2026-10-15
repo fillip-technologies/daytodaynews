@@ -49,6 +49,14 @@ export function splitKeywords(value: string | null | undefined) {
   return list.length ? list : undefined;
 }
 
+/** The site's RSS feed in `locale`. */
+export const feedPath = (locale: Locale) => `/${locale}/feed.xml`;
+
+/** Canonical URL as page metadata sets it: the admin's override, else the page's own (relative) URL. */
+export function canonicalPath(path: string, locale: Locale, translated: boolean, seo?: SeoRow) {
+  return seo?.canonicalUrl || alternates(path, locale, { translated }).canonical;
+}
+
 export function buildMetadata({
   locale,
   path,
@@ -71,7 +79,7 @@ export function buildMetadata({
   const image = seo?.ogImage || auto.image || site.defaultOgImage || undefined;
 
   const links = alternates(path, locale, { translated });
-  const canonical = seo?.canonicalUrl || links.canonical;
+  const canonical = canonicalPath(path, locale, translated, seo);
 
   const index = site.allowIndexing && !seo?.noIndex && !auto.noIndex;
   const follow = site.allowIndexing && !seo?.noFollow;
@@ -80,7 +88,12 @@ export function buildMetadata({
     title: { absolute: title },
     description,
     keywords,
-    alternates: { canonical, languages: links.languages },
+    alternates: {
+      canonical,
+      languages: links.languages,
+      // RSS autodiscovery for feed readers and news aggregators.
+      types: { "application/rss+xml": [{ url: feedPath(locale), title: site.siteName[locale] }] },
+    },
     robots: { index, follow, googleBot: { index, follow } },
     openGraph: {
       type,

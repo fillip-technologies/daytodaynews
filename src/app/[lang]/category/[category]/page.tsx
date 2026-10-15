@@ -4,6 +4,7 @@ import { FeaturedArticle } from "@/components/blog/FeaturedArticle";
 import { CategoryArticles } from "@/components/category/CategoryArticles";
 import { CategoryHeader } from "@/components/category/CategoryHeader";
 import { Newsletter } from "@/components/home/Newsletter";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { getCategory, getCategoryByAlias, type Category } from "@/data/categories";
 import { getTopic } from "@/data/topics";
 import { cache } from "react";
@@ -11,8 +12,9 @@ import { defaultLocale, format, isLocale, localizePath, type Locale } from "@/i1
 import { dictionaries } from "@/i18n/dictionaries";
 import { getCategoryListing, getPopularInCategory } from "@/lib/articles";
 import { parsePage } from "@/lib/pagination";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildMetadata, canonicalPath } from "@/lib/seo/metadata";
 import { getSiteSeo } from "@/lib/seo/site";
+import { absoluteUrl, breadcrumbList, collectionNode, graph } from "@/lib/seo/structured-data";
 import type { CleanSeo } from "@/lib/seo/validate";
 import { toneStyle, type Tone } from "@/lib/tones";
 import { prisma } from "@/lib/prisma";
@@ -91,14 +93,25 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   }
 
   const requestedPage = parsePage((await searchParams).page);
-  const [listing, popular] = await Promise.all([
+  const [listing, popular, site] = await Promise.all([
     getCategoryListing(category.topic, requestedPage, locale),
     getPopularInCategory(category.topic, 5, locale),
+    getSiteSeo(),
   ]);
   const tone = category.tone || (getTopic(category.topic)?.tone ?? "primary");
 
+  const pageUrl = absoluteUrl(site, canonicalPath(pageHref(category.slug, requestedPage), locale, true, category.seo));
+  const structuredData = graph(
+    collectionNode(site, locale, { url: pageUrl, name: category.name, description: category.description }),
+    breadcrumbList([
+      { name: dictionaries[locale].common.home, url: absoluteUrl(site, localizePath("/", locale)) },
+      { name: category.name, url: absoluteUrl(site, localizePath(`/category/${category.slug}`, locale)) },
+    ]),
+  );
+
   return (
     <main className="flex-1" style={toneStyle(tone)}>
+      <JsonLd data={structuredData} />
       <div className="relative isolate">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem] overflow-hidden">
           <div className="absolute -top-40 left-[6%] h-80 w-[36rem] rounded-full bg-(color:--tone)/12 blur-3xl" />

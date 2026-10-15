@@ -27,6 +27,9 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         ],
       },
     ],
-    sitemap: new URL("/sitemap.xml", site.siteUrl).toString(),
+    sitemap: [
+      new URL("/sitemap.xml", site.siteUrl).toString(),
+      new URL("/news-sitemap.xml", site.siteUrl).toString(),
+    ],
   };
 }

@@ -4,12 +4,21 @@ import { exploreTopics, footerGroups, type FooterGroup } from "@/config/footerNa
 import type { NavItem } from "@/config/navigation";
 import { useI18n } from "@/i18n/client";
 import { toneStyle } from "@/lib/tones";
-import { FooterBottomBar } from "./FooterBottomBar";
+import { FooterBottomBar, type FooterCredit } from "./FooterBottomBar";
 import { FooterBrand } from "./FooterBrand";
 import { FooterLinks } from "./FooterLinks";
+import type { FooterSocialLink } from "./FooterSocials";
 
-/** Site footer; `sections` are the categories (in the page's language) for the Explore column. */
-export function Footer({ sections = [] }: { sections?: NavItem[] }) {
+type FooterProps = {
+  /** The categories (in the page's language) for the Explore column. */
+  sections?: NavItem[];
+  /** "Designed & Managed by" credit from Admin → SEO → Brand & Credits, or null when off. */
+  credit?: FooterCredit | null;
+  /** Social profiles set in admin; empty hides the row. */
+  socials?: FooterSocialLink[];
+};
+
+export function Footer({ sections = [], credit = null, socials = [] }: FooterProps) {
   const { t } = useI18n();
 
   const groups: FooterGroup[] = [
@@ -50,7 +59,7 @@ export function Footer({ sections = [] }: { sections?: NavItem[] }) {
         <div className="border-t border-border py-10 sm:py-12">
           <FooterLinks groups={groups} />
         </div>
-        <FooterBottomBar />
+        <FooterBottomBar credit={credit} socials={socials} />
       </div>
     </footer>
   );

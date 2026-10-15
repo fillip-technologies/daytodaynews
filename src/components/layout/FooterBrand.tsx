@@ -10,7 +10,7 @@ export function FooterBrand() {
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-center lg:gap-16">
       <div>
-        <Logo />
+        <Logo variant="footer" />
         <p className="mt-6 max-w-xl text-2xl leading-snug font-semibold tracking-[-0.02em] text-balance text-text-primary sm:text-[1.75rem]">
           {t.footer.tagline}{" "}
           <span className="bg-gradient-primary bg-clip-text text-transparent">{t.footer.taglineHighlight}</span>

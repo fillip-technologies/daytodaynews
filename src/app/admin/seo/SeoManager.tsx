@@ -6,8 +6,17 @@ import { updatePageSeo, updateSiteSeo } from "@/actions/seo";
 import { uploadCoverImage } from "@/actions/upload";
 import { SeoFields } from "@/components/admin/SeoFields";
 import { Icon } from "@/components/ui/Icon";
+import { socialNetworks, type SocialNetwork } from "@/config/footerNavigation";
 import type { Locale } from "@/i18n/config";
-import type { SiteSeo } from "@/lib/seo/site-config";
+import {
+  articleSchemaTypes,
+  defaultSiteSeo,
+  LOGO_HEIGHT_LIMITS,
+  type ArticleSchemaType,
+  type DeveloperSettings,
+  type PublisherSettings,
+  type SiteSeo,
+} from "@/lib/seo/site-config";
 import type { SeoFieldsValue } from "@/lib/seo/validate";
 
 type PageEntry = {
@@ -19,10 +28,11 @@ type PageEntry = {
   seo: Record<Locale, SeoFieldsValue>;
 };
 
-type Tab = "website" | "pages" | "robots" | "tracking";
+type Tab = "website" | "brand" | "pages" | "robots" | "tracking";
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "website", label: "Website" },
+  { id: "brand", label: "Brand & Credits" },
   { id: "pages", label: "Pages" },
   { id: "robots", label: "Sitemap & Robots" },
   { id: "tracking", label: "Verification & Analytics" },
@@ -77,6 +87,156 @@ function Notice({ message }: { message: { type: "success" | "error"; text: strin
   );
 }
 
+const SOCIAL_LABELS: Record<SocialNetwork, string> = {
+  linkedin: "LinkedIn",
+  x: "X (Twitter)",
+  instagram: "Instagram",
+  youtube: "YouTube",
+};
+
+const ARTICLE_TYPE_LABELS: Record<ArticleSchemaType, string> = {
+  NewsArticle: "NewsArticle: news & editorial (recommended)",
+  BlogPosting: "BlogPosting: blog posts",
+  Article: "Article: general",
+};
+
+function Checkbox({
+  checked,
+  onChange,
+  title,
+  note,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  title: string;
+  note: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 rounded-xl border border-border bg-background p-3 text-xs text-text-primary">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 size-4 accent-primary"
+      />
+      <span>
+        <span className="font-semibold">{title}</span>
+        <span className="block text-text-muted">{note}</span>
+      </span>
+    </label>
+  );
+}
+
+/** An image address with an Upload button (Cloudinary) and a preview. */
+function ImageUrlField({
+  id,
+  title,
+  value,
+  onChange,
+  onError,
+  note,
+  previewClassName,
+  onDimensions,
+}: {
+  id: string;
+  title: string;
+  value: string;
+  onChange: (url: string) => void;
+  onError: (message: string) => void;
+  note?: string;
+  previewClassName: string;
+  /** Called with the image's own pixel size whenever the preview loads. */
+  onDimensions?: (width: number, height: number) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File) {
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await uploadCoverImage(formData);
+    setUploading(false);
+    if (res.success && res.url) onChange(res.url);
+    else onError(res.error || "Upload failed.");
+  }
+
+  return (
+    <div>
+      <label htmlFor={id} className={label}>{title}</label>
+      <div className="mt-1 flex gap-2">
+        <input id={id} value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://…" className={`${input} mt-0`} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="h-10 shrink-0 rounded-xl border border-border px-3 text-xs font-semibold text-primary hover:bg-primary/5 disabled:opacity-60"
+        >
+          {uploading ? "Uploading…" : "Upload"}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) upload(file);
+            e.target.value = "";
+          }}
+        />
+      </div>
+      {note && <p className={hint}>{note}</p>}
+      {value && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={value}
+          alt=""
+          onLoad={(e) => {
+            const { naturalWidth, naturalHeight } = e.currentTarget;
+            if (naturalWidth > 0 && naturalHeight > 0) onDimensions?.(naturalWidth, naturalHeight);
+          }}
+          className={`mt-2 rounded-lg border border-border ${previewClassName}`}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A pixel height slider for a logo. */
+function SizeSlider({
+  id,
+  title,
+  value,
+  limits,
+  onChange,
+}: {
+  id: string;
+  title: string;
+  value: number;
+  limits: { min: number; max: number };
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor={id} className={label}>{title}</label>
+        <span className="font-mono text-[11px] text-text-muted">{value}px</span>
+      </div>
+      <input
+        id={id}
+        type="range"
+        min={limits.min}
+        max={limits.max}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="mt-2 w-full accent-primary"
+      />
+    </div>
+  );
+}
+
 const pageUrl = (siteUrl: string, locale: Locale, path: string) => `${siteUrl}/${locale}${path === "/" ? "" : path}`;
 
 export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages: PageEntry[] }) {
@@ -92,9 +252,6 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
   );
   const [selectedPage, setSelectedPage] = useState(pages[0]?.key ?? "");
   const [pageLang, setPageLang] = useState<Locale>("en");
-
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const setLocalized = (key: "siteName" | "titleTemplate" | "defaultTitle" | "defaultDescription" | "defaultKeywords", text: string) =>
     setSite((s) => ({ ...s, [key]: { ...s[key], [siteLang]: text } }));
@@ -125,16 +282,13 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
     }
   }
 
-  async function uploadDefaultImage(file: File) {
-    setUploading(true);
-    setMessage(null);
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await uploadCoverImage(formData);
-    setUploading(false);
-    if (res.success && res.url) setSite((s) => ({ ...s, defaultOgImage: res.url! }));
-    else setMessage({ type: "error", text: res.error || "Upload failed." });
-  }
+  const setPublisher = (patch: Partial<PublisherSettings>) =>
+    setSite((s) => ({ ...s, publisher: { ...s.publisher, ...patch } }));
+  const setDeveloper = (patch: Partial<DeveloperSettings>) =>
+    setSite((s) => ({ ...s, developer: { ...s.developer, ...patch } }));
+  const setDeveloperText = (key: "creditLabel" | "description", text: string) =>
+    setSite((s) => ({ ...s, developer: { ...s.developer, [key]: { ...s.developer[key], [siteLang]: text } } }));
+  const showUploadError = (text: string) => setMessage({ type: "error", text });
 
   const page = pages.find((p) => p.key === selectedPage);
   const isCustom = (key: string) =>
@@ -229,42 +383,15 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
                 className={input}
               />
             </div>
-            <div>
-              <label htmlFor="seo-og-image" className={label}>Default share image (1200 × 630)</label>
-              <div className="mt-1 flex gap-2">
-                <input
-                  id="seo-og-image"
-                  value={site.defaultOgImage}
-                  onChange={(e) => setSite((s) => ({ ...s, defaultOgImage: e.target.value }))}
-                  placeholder="https://…"
-                  className={`${input} mt-0`}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                  className="h-10 shrink-0 rounded-xl border border-border px-3 text-xs font-semibold text-primary hover:bg-primary/5 disabled:opacity-60"
-                >
-                  {uploading ? "Uploading…" : "Upload"}
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) uploadDefaultImage(file);
-                    e.target.value = "";
-                  }}
-                />
-              </div>
-              <p className={hint}>Used when a page or article has no image of its own.</p>
-              {site.defaultOgImage && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={site.defaultOgImage} alt="" className="mt-2 aspect-[1.91/1] w-full max-w-xs rounded-lg border border-border object-cover" />
-              )}
-            </div>
+            <ImageUrlField
+              id="seo-og-image"
+              title="Default share image (1200 × 630)"
+              value={site.defaultOgImage}
+              onChange={(url) => setSite((s) => ({ ...s, defaultOgImage: url }))}
+              onError={showUploadError}
+              note="Used when a page or article has no image of its own."
+              previewClassName="aspect-[1.91/1] w-full max-w-xs object-cover"
+            />
           </div>
 
           <div className={card}>
@@ -296,6 +423,267 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
               <label htmlFor="seo-default-keywords" className={label}>Default keywords</label>
               <input id="seo-default-keywords" lang={siteLang} value={site.defaultKeywords[siteLang]} onChange={(e) => setLocalized("defaultKeywords", e.target.value)} placeholder="Comma-separated" className={input} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "brand" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className={card}>
+            <h2 className={cardTitle}>Logo & publisher: {site.siteName.en}</h2>
+            <p className="text-xs leading-relaxed text-text-secondary">
+              The website&apos;s logo and size, and who publishes it: given to Google and AI assistants on every page as
+              structured data (schema.org).
+            </p>
+            <ImageUrlField
+              id="seo-publisher-logo"
+              title="Site logo"
+              value={site.publisher.logoUrl}
+              onChange={(url) => setPublisher({ logoUrl: url })}
+              onError={showUploadError}
+              onDimensions={(width, height) => setPublisher({ logoWidth: width, logoHeight: height })}
+              note="Header, footer, Google and RSS readers. A transparent PNG or WebP works best; a path like /brand/logo.png also works. Empty restores the original logo."
+              previewClassName="h-14 w-auto max-w-full bg-background object-contain p-2"
+            />
+            <div className="space-y-4 rounded-xl border border-border bg-background p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-xs font-semibold text-text-primary">Logo size</h3>
+                <button
+                  type="button"
+                  onClick={() => setPublisher({ logoSize: defaultSiteSeo.publisher.logoSize })}
+                  className="text-[11px] font-semibold text-primary hover:underline"
+                >
+                  Reset sizes
+                </button>
+              </div>
+              <SizeSlider
+                id="seo-logo-header"
+                title="Header (tablet & desktop)"
+                value={site.publisher.logoSize.header}
+                limits={LOGO_HEIGHT_LIMITS.header}
+                onChange={(header) => setPublisher({ logoSize: { ...site.publisher.logoSize, header } })}
+              />
+              <SizeSlider
+                id="seo-logo-header-mobile"
+                title="Header (phone)"
+                value={site.publisher.logoSize.headerMobile}
+                limits={LOGO_HEIGHT_LIMITS.headerMobile}
+                onChange={(headerMobile) => setPublisher({ logoSize: { ...site.publisher.logoSize, headerMobile } })}
+              />
+              <SizeSlider
+                id="seo-logo-footer"
+                title="Footer"
+                value={site.publisher.logoSize.footer}
+                limits={LOGO_HEIGHT_LIMITS.footer}
+                onChange={(footer) => setPublisher({ logoSize: { ...site.publisher.logoSize, footer } })}
+              />
+              <p className={hint}>Heights in pixels; the width follows the logo&apos;s shape. Header sizes are capped so the logo fits the header bar.</p>
+              {site.publisher.logoUrl && (
+                <div className="space-y-2">
+                  {[
+                    { label: "Header", height: site.publisher.logoSize.header, bar: "h-[4.5rem]" },
+                    { label: "Phone", height: site.publisher.logoSize.headerMobile, bar: "h-16" },
+                    { label: "Footer", height: site.publisher.logoSize.footer, bar: "py-3" },
+                  ].map((row) => (
+                    <div key={row.label} className="flex items-center gap-3">
+                      <span className="w-12 shrink-0 text-[11px] text-text-muted">{row.label}</span>
+                      <div className={`flex min-w-0 flex-1 items-center overflow-hidden rounded-lg border border-border bg-surface px-3 ${row.bar}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={site.publisher.logoUrl} alt="" style={{ height: row.height }} className="w-auto max-w-full object-contain" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="seo-publisher-email" className={label}>Contact email</label>
+                <input
+                  id="seo-publisher-email"
+                  type="email"
+                  value={site.publisher.email}
+                  onChange={(e) => setPublisher({ email: e.target.value })}
+                  placeholder="editor@daytodaynews.com"
+                  className={input}
+                />
+              </div>
+              <div>
+                <label htmlFor="seo-publisher-founded" className={label}>Founded</label>
+                <input
+                  id="seo-publisher-founded"
+                  value={site.publisher.foundingDate}
+                  onChange={(e) => setPublisher({ foundingDate: e.target.value })}
+                  placeholder="2025 or 2025-01-15"
+                  className={input}
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="seo-article-type" className={label}>Article type for search engines</label>
+              <select
+                id="seo-article-type"
+                value={site.publisher.articleType}
+                onChange={(e) => setPublisher({ articleType: e.target.value as ArticleSchemaType })}
+                className={input}
+              >
+                {articleSchemaTypes.map((type) => (
+                  <option key={type} value={type}>{ARTICLE_TYPE_LABELS[type]}</option>
+                ))}
+              </select>
+            </div>
+            <fieldset className="space-y-2">
+              <legend className={label}>Social profiles</legend>
+              <p className={hint}>Shown as icons in the footer. Leave a network empty to hide it.</p>
+              {socialNetworks.map((network) => (
+                <div key={network} className="flex items-center gap-3">
+                  <label htmlFor={`seo-social-${network}`} className="w-24 shrink-0 text-xs text-text-secondary">
+                    {SOCIAL_LABELS[network]}
+                  </label>
+                  <input
+                    id={`seo-social-${network}`}
+                    value={site.publisher.socials[network]}
+                    onChange={(e) => setPublisher({ socials: { ...site.publisher.socials, [network]: e.target.value } })}
+                    placeholder="https://…"
+                    className={`${input} mt-0`}
+                  />
+                </div>
+              ))}
+            </fieldset>
+            <div>
+              <label htmlFor="seo-publisher-sameas" className={label}>Other official profiles</label>
+              <textarea
+                id="seo-publisher-sameas"
+                rows={3}
+                value={site.publisher.sameAs.join("\n")}
+                onChange={(e) => setPublisher({ sameAs: e.target.value.split("\n") })}
+                placeholder={"https://www.facebook.com/…\nhttps://news.google.com/publications/…"}
+                className={`${textarea} font-mono`}
+              />
+              <p className={hint}>One https:// address per line (Facebook, Google News, Crunchbase…). Not shown on the site.</p>
+            </div>
+          </div>
+
+          <div className={card}>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className={cardTitle}>Designed & managed by</h2>
+              <LanguageTabs value={siteLang} onChange={setSiteLang} />
+            </div>
+            <p className="text-xs leading-relaxed text-text-secondary">
+              The company named as the website&apos;s creator and maintainer in structured data, page tags and
+              llms.txt, plus the visible credits below. Clear the name to remove it everywhere.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="seo-dev-name" className={label}>Company name</label>
+                <input
+                  id="seo-dev-name"
+                  value={site.developer.name}
+                  onChange={(e) => setDeveloper({ name: e.target.value })}
+                  placeholder="Fillip Technologies"
+                  className={input}
+                />
+              </div>
+              <div>
+                <label htmlFor="seo-dev-url" className={label}>Company website</label>
+                <input
+                  id="seo-dev-url"
+                  value={site.developer.url}
+                  onChange={(e) => setDeveloper({ url: e.target.value })}
+                  placeholder="https://filliptechnologies.com/"
+                  className={input}
+                />
+              </div>
+            </div>
+            <ImageUrlField
+              id="seo-dev-logo"
+              title="Company logo"
+              value={site.developer.logoUrl}
+              onChange={(url) => setDeveloper({ logoUrl: url })}
+              onError={showUploadError}
+              note="Wide logo with a transparent background, readable on a light footer. Empty shows the name as text."
+              previewClassName="h-10 w-auto max-w-full bg-background object-contain p-1.5"
+            />
+            <SizeSlider
+              id="seo-dev-logo-height"
+              title="Logo height in the footer credit"
+              value={site.developer.logoHeight}
+              limits={LOGO_HEIGHT_LIMITS.credit}
+              onChange={(logoHeight) => setDeveloper({ logoHeight })}
+            />
+            <div>
+              <label htmlFor="seo-dev-label" className={label}>Credit text</label>
+              <input
+                id="seo-dev-label"
+                lang={siteLang}
+                value={site.developer.creditLabel[siteLang]}
+                onChange={(e) => setDeveloperText("creditLabel", e.target.value)}
+                className={input}
+              />
+            </div>
+            <div>
+              <label htmlFor="seo-dev-description" className={label}>About the company</label>
+              <textarea
+                id="seo-dev-description"
+                lang={siteLang}
+                rows={3}
+                value={site.developer.description[siteLang]}
+                onChange={(e) => setDeveloperText("description", e.target.value)}
+                className={textarea}
+              />
+              <p className={hint}>Shown on the About page (English) and given to search engines and AI assistants.</p>
+            </div>
+            <div>
+              <label htmlFor="seo-dev-sameas" className={label}>Company profiles</label>
+              <textarea
+                id="seo-dev-sameas"
+                rows={4}
+                value={site.developer.sameAs.join("\n")}
+                onChange={(e) => setDeveloper({ sameAs: e.target.value.split("\n") })}
+                placeholder="https://linkedin.com/company/…"
+                className={`${textarea} font-mono`}
+              />
+              <p className={hint}>One https:// address per line. Links the company&apos;s profiles to it for search engines.</p>
+            </div>
+            <div className="space-y-2">
+              <Checkbox
+                checked={site.developer.showInFooter}
+                onChange={(checked) => setDeveloper({ showInFooter: checked })}
+                title="Show the credit in the footer"
+                note="On every page, next to the copyright line."
+              />
+              <Checkbox
+                checked={site.developer.showOnAbout}
+                onChange={(checked) => setDeveloper({ showOnAbout: checked })}
+                title="Show a section on the About page"
+                note="Credit text, company name, description and a link to its website."
+              />
+              <Checkbox
+                checked={site.developer.ownsSite}
+                onChange={(checked) => setDeveloper({ ownsSite: checked })}
+                title={`This company owns ${site.siteName.en}`}
+                note="Marks it as the parent organization of the publication in structured data."
+              />
+            </div>
+            {site.developer.showInFooter && site.developer.name && (
+              <div className="rounded-xl border border-dashed border-border bg-background p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Footer preview</p>
+                <div className="mt-2 flex items-center gap-2.5 text-sm text-text-muted">
+                  {site.developer.creditLabel[siteLang]}
+                  {site.developer.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={site.developer.logoUrl}
+                      alt={site.developer.name}
+                      style={{ height: site.developer.logoHeight }}
+                      className="w-auto max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="font-semibold text-text-primary">{site.developer.name}</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -402,6 +790,22 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
               <a href="/robots.txt" target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-xl border border-border px-3 text-xs font-semibold text-primary hover:bg-primary/5">
                 Open robots.txt
               </a>
+            </div>
+            <p className="text-xs leading-relaxed text-text-secondary">
+              Also built automatically: a Google News sitemap (articles from the last 2 days, listed in robots.txt), an
+              RSS feed per language for readers and news aggregators, and llms.txt, a summary for AI assistants.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { href: "/news-sitemap.xml", text: "News sitemap" },
+                { href: "/en/feed.xml", text: "RSS (English)" },
+                { href: "/hi/feed.xml", text: "RSS (हिंदी)" },
+                { href: "/llms.txt", text: "llms.txt" },
+              ].map((link) => (
+                <a key={link.href} href={link.href} target="_blank" rel="noopener noreferrer" className="inline-flex h-9 items-center rounded-xl border border-border px-3 text-xs font-semibold text-primary hover:bg-primary/5">
+                  {link.text}
+                </a>
+              ))}
             </div>
           </div>
         </div>
