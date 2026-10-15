@@ -131,43 +131,47 @@ function SocialLinksEditor({ value, onChange }: { value: SocialLink[]; onChange:
       )}
       <ol className="space-y-2">
         {value.map((link, index) => (
-          <li key={index} className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-2 sm:flex-nowrap">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-elevated text-text-secondary">
-              <SocialIcon network={link.network} className="size-4" />
-            </span>
-            <select
-              aria-label={`Profile ${index + 1}: network`}
-              value={link.network}
-              onChange={(e) => update(index, { network: e.target.value as SocialNetwork })}
-              className={`${input} mt-0 w-36 shrink-0`}
-            >
-              {socialNetworks.map((network) => (
-                <option key={network} value={network}>{socialNetworkNames[network]}</option>
-              ))}
-            </select>
+          // Two lines so the link field always has the full width: network + buttons, then the link.
+          <li key={index} className="space-y-2 rounded-xl border border-border p-2">
+            <div className="flex items-center gap-2">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-border text-text-secondary">
+                <SocialIcon network={link.network} className="size-4" />
+              </span>
+              <select
+                aria-label={`Profile ${index + 1}: network`}
+                value={link.network}
+                onChange={(e) => update(index, { network: e.target.value as SocialNetwork })}
+                className={`${input} mt-0 min-w-0 flex-1`}
+              >
+                {socialNetworks.map((network) => (
+                  <option key={network} value={network}>{socialNetworkNames[network]}</option>
+                ))}
+              </select>
+              <div className="flex shrink-0 gap-1">
+                <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move profile ${index + 1} up`} className={iconButton}>
+                  <Icon name="arrowRight" className="size-3.5 -rotate-90" />
+                </button>
+                <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} aria-label={`Move profile ${index + 1} down`} className={iconButton}>
+                  <Icon name="arrowRight" className="size-3.5 rotate-90" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange(value.filter((_, i) => i !== index))}
+                  aria-label={`Remove profile ${index + 1}`}
+                  className={`${iconButton} hover:text-error`}
+                >
+                  <Icon name="close" className="size-3.5" />
+                </button>
+              </div>
+            </div>
             <input
+              type="url"
               aria-label={`Profile ${index + 1}: ${socialNetworkNames[link.network]} link`}
               value={link.url}
               onChange={(e) => update(index, { url: e.target.value })}
-              placeholder={SOCIAL_PLACEHOLDERS[link.network]}
-              className={`${input} order-last mt-0 min-w-0 basis-full sm:order-none sm:basis-auto sm:flex-1`}
+              placeholder={`Link, e.g. ${SOCIAL_PLACEHOLDERS[link.network]}`}
+              className={`${input} mt-0`}
             />
-            <div className="ml-auto flex gap-1 sm:ml-0">
-              <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move profile ${index + 1} up`} className={iconButton}>
-                <Icon name="arrowRight" className="size-3.5 -rotate-90" />
-              </button>
-              <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} aria-label={`Move profile ${index + 1} down`} className={iconButton}>
-                <Icon name="arrowRight" className="size-3.5 rotate-90" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onChange(value.filter((_, i) => i !== index))}
-                aria-label={`Remove profile ${index + 1}`}
-                className={`${iconButton} hover:text-error`}
-              >
-                <Icon name="close" className="size-3.5" />
-              </button>
-            </div>
           </li>
         ))}
       </ol>
