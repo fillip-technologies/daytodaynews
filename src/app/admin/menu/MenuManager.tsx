@@ -5,15 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createCategory } from "@/actions/categories";
 import { updateMenuTopics } from "@/actions/menu";
-import { updateHeaderCategories } from "@/actions/settings";
+import { updateHeaderMenus } from "@/actions/settings";
+import { Switch } from "@/components/admin/Switch";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/cn";
+import { MAX_HEADER_MENUS, MAX_MENU_CATEGORIES, type HeaderMenu } from "@/lib/header-menu";
 import { MAX_MENU_TOPICS, type MenuTopicInput } from "@/lib/menu-topics";
 import { toneStyle, type Tone } from "@/lib/tones";
 import { IconPicker } from "../categories/IconPicker";
-
-/** Same limit as updateHeaderCategories. */
-const MAX_MENU_BAR = 5;
 
 type MenuCategory = {
   id: string;
@@ -30,12 +29,15 @@ type MenuCategory = {
 };
 
 type MenuManagerProps = {
-  /** Menu-bar categories, left to right. */
-  initialHeaderSlugs: string[];
+  /** Menu-bar menus, left to right. */
+  initialMenus: HeaderMenu[];
   categories: MenuCategory[];
 };
 
 type Notice = { kind: "success" | "error"; text: string } | null;
+
+/** A menu-bar row; `uid` keeps its React key stable while rows move. */
+type BarMenu = HeaderMenu & { uid: string };
 
 const inputClass =
   "mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-text-primary focus:border-primary focus:outline-none";
@@ -48,6 +50,7 @@ const primaryButtonClass =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-surface-elevated transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60";
 const secondaryButtonClass =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-elevated px-4 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50";
+const chipButtonClass = "grid size-6 place-items-center rounded-md text-[11px] transition-colors";
 
 function move<T>(list: T[], from: number, to: number): T[] {
   if (to < 0 || to >= list.length) return list;
@@ -65,6 +68,16 @@ function slugify(text: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 }
+
+/** The menu as it will be saved. */
+const normalizeMenu = ({ labelEn, labelHi, categories }: HeaderMenu): HeaderMenu => ({
+  labelEn: labelEn.trim(),
+  labelHi: labelHi.trim(),
+  categories,
+});
+
+// Saved rows get index-based uids, so server and first client render agree.
+const withUids = (menus: HeaderMenu[]): BarMenu[] => menus.map((menu, index) => ({ ...menu, uid: `menu${index}` }));
 
 function NoticeBox({ notice }: { notice: Notice }) {
   if (!notice) return null;
@@ -98,60 +111,76 @@ function CategoryIcon({ category, size = "md" }: { category: MenuCategory; size?
   );
 }
 
-export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps) {
+export function MenuManager({ initialMenus, categories }: MenuManagerProps) {
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
 
   // Menu bar: `bar` is being edited, `savedBar` is live on the website.
-  const [savedBar, setSavedBar] = useState(initialHeaderSlugs);
-  const [bar, setBar] = useState(initialHeaderSlugs);
+  const [savedBar, setSavedBar] = useState(initialMenus);
+  const [bar, setBar] = useState(() => withUids(initialMenus));
+  const uidCounter = useRef(0);
   const [toAdd, setToAdd] = useState("");
   const [barSaving, setBarSaving] = useState(false);
   const [barNotice, setBarNotice] = useState<Notice>(null);
   const [creating, setCreating] = useState(false);
 
   // Submenu editor.
-  const [selected, setSelected] = useState(initialHeaderSlugs[0] ?? categories[0]?.slug ?? "");
+  const [selected, setSelected] = useState(initialMenus[0]?.categories[0] ?? categories[0]?.slug ?? "");
   const [editorDirty, setEditorDirty] = useState(false);
 
   const bySlug = useMemo(() => new Map(categories.map((c) => [c.slug, c])), [categories]);
-  const barCategories = bar.flatMap((slug) => bySlug.get(slug) ?? []);
-  const available = categories.filter((c) => !bar.includes(c.slug));
+  const menuName = (menu: HeaderMenu) =>
+    menu.labelEn.trim() || bySlug.get(menu.categories[0])?.label || "Untitled menu";
+  const inBar = new Set(bar.flatMap((menu) => menu.categories));
+  const available = categories.filter((c) => !inBar.has(c.slug));
+  // The saved menu each category is in, for the submenu editor's list.
+  const savedMenuOf = new Map(savedBar.flatMap((menu) => menu.categories.map((slug) => [slug, menuName(menu)])));
   // Menu-bar categories first, in menu order; then the rest by name.
-  const ordered = [...savedBar.flatMap((slug) => bySlug.get(slug) ?? []), ...categories.filter((c) => !savedBar.includes(c.slug))];
+  const ordered = [
+    ...savedBar.flatMap((menu) => menu.categories.flatMap((slug) => bySlug.get(slug) ?? [])),
+    ...categories.filter((c) => !savedMenuOf.has(c.slug)),
+  ];
   const current = bySlug.get(selected);
-  const barDirty = bar.join() !== savedBar.join();
+  const barDirty = JSON.stringify(bar.map(normalizeMenu)) !== JSON.stringify(savedBar.map(normalizeMenu));
 
   const refresh = useCallback(() => startRefresh(() => router.refresh()), [router]);
 
-  function editBar(next: string[]) {
+  function editBar(next: BarMenu[]) {
     setBar(next);
     setBarNotice(null);
   }
 
-  function addToBar() {
-    if (!toAdd || bar.length >= MAX_MENU_BAR) return;
-    editBar([...bar, toAdd]);
+  function updateMenu(uid: string, patch: Partial<HeaderMenu>) {
+    editBar(bar.map((menu) => (menu.uid === uid ? { ...menu, ...patch } : menu)));
+  }
+
+  function addMenu() {
+    if (!toAdd || bar.length >= MAX_HEADER_MENUS) return;
+    editBar([...bar, { labelEn: "", labelHi: "", categories: [toAdd], uid: `new${++uidCounter.current}` }]);
     setToAdd("");
   }
 
-  function removeFromBar(slug: string) {
+  function removeMenu(uid: string) {
     if (bar.length <= 1) {
       setBarNotice({ kind: "error", text: "The menu bar needs at least 1 menu." });
       return;
     }
-    editBar(bar.filter((s) => s !== slug));
+    editBar(bar.filter((menu) => menu.uid !== uid));
+  }
+
+  function showSaved(menus: HeaderMenu[]) {
+    setSavedBar(menus);
+    setBar(withUids(menus));
   }
 
   async function saveBar() {
     setBarSaving(true);
     setBarNotice(null);
     try {
-      const res = await updateHeaderCategories(bar);
+      const menus = bar.map(normalizeMenu);
+      const res = await updateHeaderMenus(menus);
       if (res.success) {
-        const slugs = res.slugs ?? bar;
-        setSavedBar(slugs);
-        setBar(slugs);
+        showSaved(res.menus ?? menus);
         setBarNotice({ kind: "success", text: "Menu bar saved. The website header now shows these menus." });
       } else {
         setBarNotice({ kind: "error", text: res.error ?? "Could not save the menu bar." });
@@ -179,12 +208,11 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
     let text = `"${label}" created. Add it to the menu bar when you're ready, and add its submenu topics below.`;
     let kind: "success" | "error" = "success";
     if (addToMenuBar) {
-      // Adds to the live menu bar; unsaved reordering above is replaced by it.
-      const next = [...savedBar, slug];
-      const res = await updateHeaderCategories(next);
+      // Adds to the live menu bar; unsaved menu-bar edits above are replaced by it.
+      const next = [...savedBar, { labelEn: "", labelHi: "", categories: [slug] }];
+      const res = await updateHeaderMenus(next);
       if (res.success) {
-        setSavedBar(res.slugs ?? next);
-        setBar(res.slugs ?? next);
+        showSaved(res.menus ?? next);
         text = `"${label}" created and added to the menu bar. Now add its submenu topics below.`;
       } else {
         kind = "error";
@@ -201,8 +229,8 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">Mega Menu</h1>
           <p className="mt-1 text-xs text-text-muted">
-            Choose the menus in the website header, create new ones, and edit the topics inside each dropdown, in
-            English and Hindi.
+            Choose the menus in the website header, group categories under them, and edit the topics inside each
+            dropdown, in English and Hindi.
           </p>
         </div>
         <Link href="/" target="_blank" rel="noopener noreferrer" className={secondaryButtonClass}>
@@ -221,15 +249,16 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
               <span
                 className={cn(
                   "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold",
-                  bar.length === MAX_MENU_BAR ? "bg-accent/15 text-accent" : "bg-primary/10 text-primary",
+                  bar.length === MAX_HEADER_MENUS ? "bg-accent/15 text-accent" : "bg-primary/10 text-primary",
                 )}
               >
-                {bar.length} / {MAX_MENU_BAR}
+                {bar.length} / {MAX_HEADER_MENUS}
               </span>
             </div>
-            <p className="mt-1 text-xs text-text-muted">
-              The menus across the top of the website, left to right. Each one opens a dropdown with its submenu
-              topics and latest stories.
+            <p className="mt-1 max-w-3xl text-xs text-text-muted">
+              The menus across the top of the website after Home, left to right. Each dropdown shows a column per
+              category (up to {MAX_MENU_CATEGORIES}) with its submenu topics, plus the latest stories. Leave a label
+              empty to use the first category&apos;s name; the label links to that category&apos;s page.
             </p>
           </div>
           <button
@@ -244,7 +273,7 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
 
         {creating && (
           <NewMenuForm
-            canAddToMenuBar={savedBar.length < MAX_MENU_BAR}
+            canAddToMenuBar={savedBar.length < MAX_HEADER_MENUS}
             barDirty={barDirty}
             onCancel={() => setCreating(false)}
             onCreated={handleCreated}
@@ -252,81 +281,163 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
         )}
 
         <ol className="mt-5 space-y-2.5">
-          {barCategories.map((category, index) => (
-            <li
-              key={category.slug}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-3"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface-elevated font-mono text-xs font-bold text-text-muted ring-1 ring-border">
-                  {index + 1}
-                </span>
-                <CategoryIcon category={category} />
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-bold text-text-primary">
-                    {category.label}
-                    {category.labelHi && <span className="font-normal text-text-muted"> · {category.labelHi}</span>}
-                  </p>
-                  <p className="text-[11px] text-text-muted">
-                    {category.topics.length} submenu topics · {category.articleCount} articles
-                    {index === 3 && " · shows on large screens (others: in the ☰ menu)"}
-                    {index === 4 && " · shows on extra-large screens (others: in the ☰ menu)"}
-                  </p>
+          {bar.map((menu, index) => {
+            const first = bySlug.get(menu.categories[0]);
+            const name = menuName(menu);
+            return (
+              <li key={menu.uid} className="rounded-xl border border-border bg-background p-3.5">
+                <div className="flex items-start gap-3">
+                  <span className="mt-6 grid size-7 shrink-0 place-items-center rounded-lg bg-surface-elevated font-mono text-xs font-bold text-text-muted ring-1 ring-border">
+                    {index + 1}
+                  </span>
+                  <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className={labelClass}>Label in the header (English)</span>
+                      <input
+                        value={menu.labelEn}
+                        onChange={(e) => updateMenu(menu.uid, { labelEn: e.target.value })}
+                        maxLength={60}
+                        placeholder={first?.label ?? "e.g. Government"}
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className={labelClass}>Label in the header (हिंदी)</span>
+                      <input
+                        lang="hi"
+                        value={menu.labelHi}
+                        onChange={(e) => updateMenu(menu.uid, { labelHi: e.target.value })}
+                        maxLength={60}
+                        placeholder={first?.labelHi || "Optional; the category's Hindi name is used if empty"}
+                        className={inputClass}
+                      />
+                    </label>
+                  </div>
+                  <div className="mt-5 flex shrink-0 flex-col gap-1.5 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => editBar(move(bar, index, index - 1))}
+                      disabled={index === 0}
+                      aria-label={`Move ${name} left`}
+                      className={iconButtonClass}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => editBar(move(bar, index, index + 1))}
+                      disabled={index === bar.length - 1}
+                      aria-label={`Move ${name} right`}
+                      className={iconButtonClass}
+                    >
+                      ▼
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeMenu(menu.uid)}
+                      aria-label={`Remove ${name} from the menu bar`}
+                      className={removeButtonClass}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => selectCategory(category.slug, true)}
-                  className={cn(secondaryButtonClass, "h-8 px-3")}
-                >
-                  Edit submenu
-                </button>
-                <button
-                  type="button"
-                  onClick={() => editBar(move(bar, index, index - 1))}
-                  disabled={index === 0}
-                  aria-label={`Move ${category.label} left`}
-                  className={iconButtonClass}
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  onClick={() => editBar(move(bar, index, index + 1))}
-                  disabled={index === bar.length - 1}
-                  aria-label={`Move ${category.label} right`}
-                  className={iconButtonClass}
-                >
-                  ▼
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeFromBar(category.slug)}
-                  aria-label={`Remove ${category.label} from the menu bar`}
-                  className={removeButtonClass}
-                >
-                  ✕
-                </button>
-              </div>
-            </li>
-          ))}
+
+                <div className="mt-3 border-t border-border pt-3 sm:ml-10">
+                  <p className={labelClass}>
+                    Categories in this dropdown
+                    {menu.categories.length > 1 && (
+                      <span className="font-normal text-text-muted"> · the label links to the first</span>
+                    )}
+                  </p>
+                  <ul className="mt-2 flex flex-wrap items-center gap-2">
+                    {menu.categories.map((slug, position) => {
+                      const category = bySlug.get(slug);
+                      if (!category) return null;
+                      return (
+                        <li
+                          key={slug}
+                          className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-elevated py-1 pr-1 pl-1.5"
+                        >
+                          <CategoryIcon category={category} size="sm" />
+                          <span className="text-xs font-semibold text-text-primary">{category.label}</span>
+                          <span className="text-[11px] text-text-muted">· {category.topics.length} topics</span>
+                          <button
+                            type="button"
+                            onClick={() => selectCategory(slug, true)}
+                            className="rounded-lg px-2 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/5"
+                          >
+                            Edit topics
+                          </button>
+                          {position > 0 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateMenu(menu.uid, { categories: move(menu.categories, position, position - 1) })
+                              }
+                              aria-label={`Move ${category.label} earlier in ${name}`}
+                              title="Move earlier"
+                              className={cn(chipButtonClass, "text-text-muted hover:bg-background hover:text-text-primary")}
+                            >
+                              ◀
+                            </button>
+                          )}
+                          {menu.categories.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateMenu(menu.uid, { categories: menu.categories.filter((s) => s !== slug) })
+                              }
+                              aria-label={`Remove ${category.label} from ${name}`}
+                              title="Remove from this menu"
+                              className={cn(chipButtonClass, "text-error hover:bg-error/10")}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                    {menu.categories.length < MAX_MENU_CATEGORIES && available.length > 0 && (
+                      <li>
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) updateMenu(menu.uid, { categories: [...menu.categories, e.target.value] });
+                          }}
+                          aria-label={`Add a category column to ${name}`}
+                          className={cn(inputClass, "mt-0 h-9 w-60")}
+                        >
+                          <option value="">+ Add a category column…</option>
+                          {available.map((category) => (
+                            <option key={category.slug} value={category.slug}>
+                              {category.label}
+                            </option>
+                          ))}
+                        </select>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </li>
+            );
+          })}
         </ol>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <select
             value={toAdd}
             onChange={(e) => setToAdd(e.target.value)}
-            disabled={bar.length >= MAX_MENU_BAR || available.length === 0}
-            aria-label="Category to add to the menu bar"
+            disabled={bar.length >= MAX_HEADER_MENUS || available.length === 0}
+            aria-label="Category for a new menu"
             className={cn(inputClass, "mt-0 h-9 w-full sm:w-72")}
           >
             <option value="">
-              {bar.length >= MAX_MENU_BAR
-                ? `Menu bar is full (${MAX_MENU_BAR}): remove one to add another`
+              {bar.length >= MAX_HEADER_MENUS
+                ? `Menu bar is full (${MAX_HEADER_MENUS}): remove one to add another`
                 : available.length === 0
-                  ? "Every category is already in the menu bar"
-                  : "Add an existing category…"}
+                  ? "Every category is already in a menu"
+                  : "New menu from a category…"}
             </option>
             {available.map((category) => (
               <option key={category.slug} value={category.slug}>
@@ -336,21 +447,26 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
           </select>
           <button
             type="button"
-            onClick={addToBar}
-            disabled={!toAdd || bar.length >= MAX_MENU_BAR}
+            onClick={addMenu}
+            disabled={!toAdd || bar.length >= MAX_HEADER_MENUS}
             className={secondaryButtonClass}
           >
-            Add to menu bar
+            Add menu
           </button>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <Link href="/admin/categories" className="text-xs font-semibold text-primary hover:underline">
-            Rename or delete a menu in Categories →
+            Rename or delete a category in Categories →
           </Link>
           <div className="flex items-center gap-2">
             {barDirty && (
-              <button type="button" onClick={() => editBar(savedBar)} disabled={barSaving} className={secondaryButtonClass}>
+              <button
+                type="button"
+                onClick={() => editBar(withUids(savedBar))}
+                disabled={barSaving}
+                className={secondaryButtonClass}
+              >
                 Discard
               </button>
             )}
@@ -377,15 +493,15 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
             Submenu topics
           </h2>
           <p className="mt-1 text-xs text-text-muted">
-            Pick a menu, then add, edit, reorder or remove the topics in its dropdown. They also appear in the ☰
-            menu on phones.
+            Pick a category, then add, edit, reorder or remove the topics in its dropdown column. They also appear in
+            the ☰ menu on phones.
           </p>
         </div>
 
         <div className="mt-5 grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-          <nav aria-label="Menus" className="space-y-1">
+          <nav aria-label="Categories" className="space-y-1">
             {ordered.map((category) => {
-              const position = savedBar.indexOf(category.slug);
+              const menu = savedMenuOf.get(category.slug);
               const active = category.slug === selected;
               return (
                 <button
@@ -401,9 +517,9 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
                   <CategoryIcon category={category} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs font-semibold text-text-primary">{category.label}</span>
-                    <span className="block text-[11px] text-text-muted">
+                    <span className="block truncate text-[11px] text-text-muted">
                       {category.topics.length} topics
-                      {position >= 0 ? ` · menu bar #${position + 1}` : " · not in menu bar"}
+                      {menu ? ` · in “${menu}”` : " · not in menu bar"}
                     </span>
                   </span>
                 </button>
@@ -415,13 +531,13 @@ export function MenuManager({ initialHeaderSlugs, categories }: MenuManagerProps
             <TopicEditor
               key={current.id}
               category={current}
-              inMenuBar={savedBar.includes(current.slug)}
+              inMenuBar={savedMenuOf.has(current.slug)}
               onDirtyChange={setEditorDirty}
               onSaved={refresh}
             />
           ) : (
             <p className="rounded-xl border border-dashed border-border p-8 text-center text-xs text-text-muted">
-              {isRefreshing ? "Loading…" : "Pick a menu on the left."}
+              {isRefreshing ? "Loading…" : "Pick a category on the left."}
             </p>
           )}
         </div>
@@ -618,45 +734,6 @@ function topicStatus(topic: MenuTopicInput, matches: Record<string, number>) {
     : { text: "Hidden · no matching articles yet", tone: "off" as const };
 }
 
-function Switch({
-  checked,
-  disabled,
-  onChange,
-  label,
-  title,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  onChange: (checked: boolean) => void;
-  label: string;
-  title?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      title={title}
-      onClick={() => onChange(!checked)}
-      className="inline-flex items-center gap-2 rounded-full text-xs font-semibold text-text-secondary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <span
-        aria-hidden="true"
-        className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", checked ? "bg-primary" : "bg-border")}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 left-0.5 size-4 rounded-full bg-surface-elevated shadow-xs transition-transform motion-reduce:transition-none",
-            checked && "translate-x-4",
-          )}
-        />
-      </span>
-      {label}
-    </button>
-  );
-}
-
 function TopicEditor({
   category,
   inMenuBar,
@@ -754,7 +831,8 @@ function TopicEditor({
           </p>
           {!inMenuBar && (
             <p className="mt-2 text-xs font-medium text-accent">
-              This category isn&apos;t in the menu bar, so these topics show only in the ☰ menu.
+              This category isn&apos;t in any menu yet, so its topics aren&apos;t shown on the website. Add it to a
+              menu in the menu bar above.
             </p>
           )}
         </div>

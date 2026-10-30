@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Sheet } from "@/components/ui/Sheet";
-import { isActivePath, primaryNavigation, secondaryNavigation } from "@/config/navigation";
+import { isActivePath, primaryNavigation, utilityNavigation, type NavGroup } from "@/config/navigation";
 import { useI18n } from "@/i18n/client";
 import { format } from "@/i18n/config";
 import { cn } from "@/lib/cn";
@@ -17,22 +17,26 @@ import { SubscribeButton } from "./SubscribeButton";
 
 type MobileNavProps = {
   id: string;
-  /** Every category; each one's topics expand in place. */
-  sections?: NavItem[];
+  /** The header menus; each one's topics expand in place. */
+  items?: NavItem[];
   open: boolean;
   onClose: () => void;
 };
 
+const rowLinkClass =
+  "block rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-text-primary/5 hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
+
 /**
- * Site menu drawer. It is the full navigation on mobile and the "Menu"
- * overflow on larger screens, so it lists every category plus secondary links.
- * Categories with topics expand accordion-style, which works by touch.
+ * Site menu drawer, the navigation below `lg`: the same menus as the header
+ * bar, plus the utility links. Menus with topics expand accordion-style, which
+ * works by touch; a menu spanning several categories lists each under its name.
  */
-export function MobileNav({ id, sections, open, onClose }: MobileNavProps) {
+export function MobileNav({ id, items, open, onClose }: MobileNavProps) {
   const { t } = useI18n();
   const pathname = usePathname();
-  const navList = sections && sections.length > 0 ? sections : primaryNavigation;
+  const navList = items && items.length > 0 ? items : primaryNavigation;
   const [expanded, setExpanded] = useState<string | null>(null);
+  const currentUtility = utilityNavigation.find((link) => isActivePath(pathname, link.href))?.key;
 
   return (
     <Sheet id={id} open={open} onClose={onClose} label={t.header.siteMenu}>
@@ -60,53 +64,25 @@ export function MobileNav({ id, sections, open, onClose }: MobileNavProps) {
               {t.header.sections}
             </p>
             <ul className="mt-2 space-y-0.5">
+              <li>
+                <MenuRow href="/" label={t.common.home} icon="house" active={isActivePath(pathname, "/")} onClose={onClose} />
+              </li>
               {navList.map((item, index) => {
-                const active = isActivePath(pathname, item.href);
-                const topics = item.topics ?? [];
+                const groups = (item.groups ?? []).filter((group) => group.topics.length > 0);
                 const isExpanded = expanded === item.href;
                 const panelId = `${id}-topics-${index}`;
                 return (
                   <li key={item.href}>
                     <div className="flex items-center gap-1">
-                      <Link
+                      <MenuRow
                         href={item.href}
-                        onClick={onClose}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "group flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-150",
-                          "outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary",
-                          active ? "bg-primary/10" : "hover:bg-text-primary/5",
-                        )}
-                      >
-                        {item.icon && (
-                          <span
-                            className={cn(
-                              "grid size-9 shrink-0 place-items-center rounded-lg border transition-colors",
-                              active
-                                ? "border-transparent bg-primary text-surface-elevated"
-                                : "border-border bg-surface text-text-secondary group-hover:text-primary",
-                            )}
-                          >
-                            <Icon name={item.icon} className="size-[18px]" />
-                          </span>
-                        )}
-                        <span className="min-w-0">
-                          <span
-                            className={cn(
-                              "block text-[0.9375rem] font-medium",
-                              active ? "text-primary" : "text-text-primary",
-                            )}
-                          >
-                            {item.label}
-                          </span>
-                          {item.description && (
-                            <span className="block truncate text-sm text-text-muted">
-                              {item.description}
-                            </span>
-                          )}
-                        </span>
-                      </Link>
-                      {topics.length > 0 && (
+                        label={item.label}
+                        description={item.description}
+                        icon={item.icon}
+                        active={isActivePath(pathname, item.href)}
+                        onClose={onClose}
+                      />
+                      {groups.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setExpanded(isExpanded ? null : item.href)}
@@ -131,20 +107,25 @@ export function MobileNav({ id, sections, open, onClose }: MobileNavProps) {
                         </button>
                       )}
                     </div>
-                    {topics.length > 0 && (
-                      <ul id={panelId} hidden={!isExpanded} className="mt-1 mb-2 ml-15 border-l border-border pl-2">
-                        {topics.map((topic, topicIndex) => (
-                          <li key={`${topicIndex}:${topic.href}`}>
-                            <Link
-                              href={topic.href}
-                              onClick={onClose}
-                              className="block rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-text-primary/5 hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
-                            >
-                              {topic.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
+                    {groups.length > 0 && (
+                      <div id={panelId} hidden={!isExpanded} className="mt-1 mb-2 ml-15 border-l border-border pl-2">
+                        {groups.length === 1 ? (
+                          <TopicLinks group={groups[0]} onClose={onClose} />
+                        ) : (
+                          groups.map((group) => (
+                            <div key={group.href} className="mb-2 last:mb-0">
+                              <Link
+                                href={group.href}
+                                onClick={onClose}
+                                className="block rounded-lg px-3 pt-2.5 pb-1 text-xs font-semibold uppercase tracking-[0.1em] text-text-muted transition-colors hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+                              >
+                                {group.label}
+                              </Link>
+                              <TopicLinks group={group} onClose={onClose} />
+                            </div>
+                          ))
+                        )}
+                      </div>
                     )}
                   </li>
                 );
@@ -152,17 +133,17 @@ export function MobileNav({ id, sections, open, onClose }: MobileNavProps) {
             </ul>
           </nav>
 
-          <nav aria-label={t.header.more} className="mt-6 border-t border-border pt-5">
+          <nav aria-label={t.header.utilityNav} className="mt-6 border-t border-border pt-5">
             <ul className="grid grid-cols-2 gap-1">
-              {secondaryNavigation.map((item) => (
-                <li key={item.href}>
+              {utilityNavigation.map((link) => (
+                <li key={link.key}>
                   <Link
-                    href={item.href}
+                    href={link.href}
                     onClick={onClose}
-                    aria-current={isActivePath(pathname, item.href) ? "page" : undefined}
+                    aria-current={link.key === currentUtility ? "page" : undefined}
                     className="block rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-text-primary/5 hover:text-text-primary aria-[current=page]:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
                   >
-                    {t.secondaryNav[item.key]}
+                    {t.utilityNav[link.key]}
                   </Link>
                 </li>
               ))}
@@ -171,12 +152,72 @@ export function MobileNav({ id, sections, open, onClose }: MobileNavProps) {
         </div>
 
         <div className="shrink-0 border-t border-border bg-background px-4 py-4 sm:px-5">
-          <p className="mb-3 text-sm text-text-secondary">
-            {t.header.drawerPitch}
-          </p>
+          <p className="mb-3 text-sm text-text-secondary">{t.header.drawerPitch}</p>
           <SubscribeButton size="md" className="w-full" onClick={onClose} />
         </div>
       </div>
     </Sheet>
+  );
+}
+
+function MenuRow({
+  href,
+  label,
+  description,
+  icon,
+  active,
+  onClose,
+}: {
+  href: string;
+  label: string;
+  description?: string;
+  icon?: NavItem["icon"];
+  active: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClose}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-150",
+        "outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary",
+        active ? "bg-primary/10" : "hover:bg-text-primary/5",
+      )}
+    >
+      {icon && (
+        <span
+          className={cn(
+            "grid size-9 shrink-0 place-items-center rounded-lg border transition-colors",
+            active
+              ? "border-transparent bg-primary text-surface-elevated"
+              : "border-border bg-surface text-text-secondary group-hover:text-primary",
+          )}
+        >
+          <Icon name={icon} className="size-[18px]" />
+        </span>
+      )}
+      <span className="min-w-0">
+        <span className={cn("block text-[0.9375rem] font-medium", active ? "text-primary" : "text-text-primary")}>
+          {label}
+        </span>
+        {description && <span className="block truncate text-sm text-text-muted">{description}</span>}
+      </span>
+    </Link>
+  );
+}
+
+function TopicLinks({ group, onClose }: { group: NavGroup; onClose: () => void }) {
+  return (
+    <ul>
+      {group.topics.map((topic, index) => (
+        <li key={`${index}:${topic.href}`}>
+          <Link href={topic.href} onClick={onClose} className={rowLinkClass}>
+            {topic.label}
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

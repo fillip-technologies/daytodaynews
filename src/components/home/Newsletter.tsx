@@ -14,9 +14,12 @@ type NewsletterProps = {
    * Called with the email on submit. Defaults to the built-in MariaDB newsletter server action.
    */
   onSubscribe?: (email: string) => Promise<void>;
+  /** Admin overrides; empty uses the default wording. */
+  title?: string;
+  description?: string;
 };
 
-export function Newsletter({ onSubscribe }: NewsletterProps) {
+export function Newsletter({ onSubscribe, title, description }: NewsletterProps) {
   const { t } = useI18n();
   const [status, setStatus] = useState<"idle" | "submitting" | "done">("idle");
 
@@ -58,10 +61,10 @@ export function Newsletter({ onSubscribe }: NewsletterProps) {
                 id="newsletter-title"
                 className="mt-5 text-3xl leading-[1.1] font-semibold tracking-[-0.03em] text-text-primary sm:text-4xl lg:text-[2.75rem]"
               >
-                {t.newsletter.title}
+                {title || t.newsletter.title}
               </h2>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-text-secondary sm:text-lg">
-                {t.newsletter.description}
+                {description || t.newsletter.description}
               </p>
 
               {status === "done" ? (

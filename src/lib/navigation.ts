@@ -1,5 +1,5 @@
 import { cache } from "react";
-import type { NavItem, NavLink, NavStory } from "@/config/navigation";
+import { primaryNavigation, type NavGroup, type NavItem, type NavLink, type NavStory } from "@/config/navigation";
 import { getTopic } from "@/data/topics";
 import type { Locale } from "@/i18n/config";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +7,7 @@ import type { Article } from "@/types/article";
 import { getArticleSummaries, getTopics } from "./articles";
 import { queryArticles } from "./blog";
 import { searchUrl } from "./search";
-import { getHeaderNavigation } from "./settings";
+import { getHeaderMenus } from "./settings";
 
 const MAX_MENU_STORIES = 3;
 
@@ -20,9 +20,9 @@ type MenuTopicRow = {
 };
 
 export type SiteNavigation = {
-  /** Categories in the header bar, in the order chosen in admin settings. */
+  /** Menus in the header bar, in the order chosen in Admin → Mega Menu. */
   header: NavItem[];
-  /** Every category, for the menu drawer and footer. */
+  /** Every category, for the footer. */
   sections: NavItem[];
 };
 
@@ -51,35 +51,54 @@ const getMenuTopics = cache(async (): Promise<Map<string, MenuTopicRow[]>> => {
   }
 });
 
-/** Header and drawer navigation in `locale`, each category carrying its mega-menu content. */
+/** Header menus and categories in `locale`, each menu carrying its mega-menu content. */
 export async function getSiteNavigation(locale: Locale = "en"): Promise<SiteNavigation> {
-  const [header, topics, articles, menuTopics] = await Promise.all([
-    getHeaderNavigation(locale),
+  const [menus, topics, articles, menuTopics] = await Promise.all([
+    getHeaderMenus(),
     getTopics(locale),
     getArticleSummaries(locale),
     getMenuTopics(),
   ]);
 
-  const withMenu = (item: NavItem): NavItem =>
-    item.category
-      ? { ...item, ...menuContent(item.category, articles, locale, menuTopics.get(item.category) ?? []) }
-      : item;
+  const sections: NavItem[] = topics.map((topic) => ({
+    label: topic.label,
+    href: topic.href || `/category/${topic.slug}`,
+    category: topic.slug,
+    icon: topic.icon,
+    description: topic.description,
+  }));
+  const bySlug = new Map(sections.map((section) => [section.category, section]));
 
-  return {
-    header: header.map(withMenu),
-    sections: topics.map((topic) =>
-      withMenu({
-        label: topic.label,
-        href: topic.href || `/category/${topic.slug}`,
-        category: topic.slug,
-        icon: topic.icon,
-        description: topic.description,
-      }),
-    ),
-  };
+  // Menus whose categories have all been deleted are left out.
+  const header = menus.flatMap((menu): NavItem[] => {
+    const groups = menu.categories.flatMap((slug): NavGroup[] => {
+      const section = bySlug.get(slug);
+      return section
+        ? [{ ...section, category: slug, ...groupContent(slug, articles, locale, menuTopics.get(slug) ?? []) }]
+        : [];
+    });
+    const [first] = groups;
+    if (!first) return [];
+    const custom = locale === "hi" ? menu.labelHi : menu.labelEn;
+    return [
+      {
+        label: custom || first.label,
+        href: first.href,
+        category: first.category,
+        icon: first.icon,
+        // One category's line would misdescribe a menu that spans several.
+        description: groups.length === 1 ? first.description : undefined,
+        groups,
+        stories: topStories(articles, menu.categories),
+        articleCount: groups.reduce((sum, group) => sum + group.articleCount, 0),
+      },
+    ];
+  });
+
+  return { header: header.length > 0 ? header : primaryNavigation, sections };
 }
 
-function menuContent(slug: string, articles: Article[], locale: Locale, menuTopics: MenuTopicRow[]) {
+function groupContent(slug: string, articles: Article[], locale: Locale, menuTopics: MenuTopicRow[]) {
   // /search ignores categories it doesn't know, so match exactly as it will.
   const category = getTopic(slug) ? slug : null;
 
@@ -98,9 +117,14 @@ function menuContent(slug: string, articles: Article[], locale: Locale, menuTopi
       href: t.href || searchUrl({ query: t.query ?? "", category }),
     }));
 
-  const inCategory = articles.filter((article) => article.topic === slug);
+  return { topics, articleCount: articles.filter((article) => article.topic === slug).length };
+}
+
+/** The menu's newest articles across its categories, featured ones first. */
+function topStories(articles: Article[], categories: string[]): NavStory[] {
   // Featured first; the sort is stable, so each group stays newest first.
-  const stories: NavStory[] = [...inCategory]
+  return articles
+    .filter((article) => article.topic && categories.includes(article.topic))
     .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
     .slice(0, MAX_MENU_STORIES)
     .map(({ title, href, date, readTime, image, cover, locale: storyLocale }) => ({
@@ -112,6 +136,4 @@ function menuContent(slug: string, articles: Article[], locale: Locale, menuTopi
       cover,
       locale: storyLocale,
     }));
-
-  return { topics, stories, articleCount: inCategory.length };
 }

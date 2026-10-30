@@ -3,7 +3,7 @@ import { getArticleSummaries } from "@/lib/articles";
 import { queryArticles } from "@/lib/blog";
 import { toMenuTopicInput } from "@/lib/menu-topics";
 import { prisma } from "@/lib/prisma";
-import { getHeaderCategorySlugs } from "@/lib/settings";
+import { getHeaderMenus } from "@/lib/settings";
 import { MenuManager } from "./MenuManager";
 
 export const metadata = {
@@ -11,7 +11,7 @@ export const metadata = {
 };
 
 export default async function AdminMenuPage() {
-  const [categories, headerSlugs, articles] = await Promise.all([
+  const [categories, menus, articles] = await Promise.all([
     prisma.topic.findMany({
       orderBy: { label: "asc" },
       select: {
@@ -28,13 +28,20 @@ export default async function AdminMenuPage() {
         },
       },
     }),
-    getHeaderCategorySlugs(),
+    getHeaderMenus(),
     getArticleSummaries("en"),
   ]);
 
+  // Deleted categories drop out of their menus, and menus left empty drop out.
+  const known = new Set(categories.map((c) => c.slug));
+  const initialMenus = menus.flatMap((menu) => {
+    const slugs = menu.categories.filter((slug) => known.has(slug));
+    return slugs.length > 0 ? [{ ...menu, categories: slugs }] : [];
+  });
+
   return (
     <MenuManager
-      initialHeaderSlugs={headerSlugs.filter((slug) => categories.some((c) => c.slug === slug))}
+      initialMenus={initialMenus}
       categories={categories.map((category) => {
         // Count matches exactly as the public menu does (lib/navigation).
         const scope = getTopic(category.slug) ? category.slug : null;

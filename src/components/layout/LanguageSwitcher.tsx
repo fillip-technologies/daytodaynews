@@ -24,7 +24,7 @@ function SwitchIcon({ busy }: { busy: boolean }) {
  * Link to the current page in the other language. The choice is remembered in a
  * cookie, which the proxy uses when a reader next opens the home page.
  */
-export function LanguageSwitcher({ className }: { className?: string }) {
+export function LanguageSwitcher({ size = "md", className }: { size?: "sm" | "md"; className?: string }) {
   const { locale, t } = useI18n();
   const pathname = usePathname();
   const router = useRouter();
@@ -48,7 +48,8 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         }
       }}
       className={cn(
-        "inline-flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-text-secondary transition-colors duration-150",
+        "inline-flex items-center gap-1.5 rounded-full font-medium text-text-secondary transition-colors duration-150",
+        size === "sm" ? "h-7 px-2 text-xs" : "h-10 px-3 text-sm",
         "hover:bg-text-primary/5 hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary",
         className,
       )}

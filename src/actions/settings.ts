@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { cleanHeaderMenus, HEADER_MENU_SETTING, type HeaderMenu } from "@/lib/header-menu";
 
 async function requireStaff() {
   const user = await getCurrentUser();
@@ -12,106 +13,30 @@ async function requireStaff() {
   return user;
 }
 
-export async function updateHeaderCategories(slugs: string[]) {
+/** Replaces the header menu bar with `input` (in display order). */
+export async function updateHeaderMenus(
+  input: unknown,
+): Promise<{ success: boolean; error?: string; menus?: HeaderMenu[] }> {
   try {
     await requireStaff();
 
-    if (!Array.isArray(slugs)) {
-      return { success: false, error: "Invalid category selection." };
-    }
+    const topics = await prisma.topic.findMany({ select: { slug: true } });
+    const cleaned = cleanHeaderMenus(input, new Set(topics.map((topic) => topic.slug)));
+    if (!cleaned.ok) return { success: false, error: cleaned.error };
 
-    if (slugs.length === 0) {
-      return { success: false, error: "Please select at least 1 category for the header." };
-    }
-
-    if (slugs.length > 5) {
-      return { success: false, error: "Maximum 5 categories can be shown in the header." };
-    }
-
-    // Verify all slugs exist in DB
-    const existingTopics = await prisma.topic.findMany({
-      where: { slug: { in: slugs } },
-      select: { slug: true },
-    });
-
-    const validSlugs = slugs.filter((s) =>
-      existingTopics.some((t) => t.slug === s)
-    );
-
-    if (validSlugs.length === 0) {
-      return { success: false, error: "None of the selected categories were found." };
-    }
-
-    if (!prisma.siteSetting) {
-      return { success: false, error: "SiteSetting model is initializing. Please try again." };
-    }
-
+    const value = JSON.stringify(cleaned.value);
     await prisma.siteSetting.upsert({
-      where: { key: "header_categories" },
-      update: { value: JSON.stringify(validSlugs) },
-      create: { key: "header_categories", value: JSON.stringify(validSlugs) },
+      where: { key: HEADER_MENU_SETTING },
+      update: { value },
+      create: { key: HEADER_MENU_SETTING, value },
     });
 
-    // Revalidate global layout so header updates across all pages
-    revalidatePath("/", "layout");
-    revalidatePath("/admin/settings");
-
-    return { success: true, slugs: validSlugs };
+    revalidatePath("/", "layout"); // The header appears on every page.
+    revalidatePath("/admin/menu");
+    return { success: true, menus: cleaned.value };
   } catch (error) {
-    console.error("updateHeaderCategories error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update header categories.",
-    };
-  }
-}
-
-export async function updateHeroArticles(slugs: string[]) {
-  try {
-    await requireStaff();
-
-    if (!Array.isArray(slugs)) {
-      return { success: false, error: "Invalid article selection." };
-    }
-
-    if (slugs.length !== 3) {
-      return { success: false, error: "Exactly 3 articles must be selected for the homepage hero section." };
-    }
-
-    // Verify all slugs exist in DB and are published
-    const existingArticles = await prisma.article.findMany({
-      where: { slug: { in: slugs }, status: "PUBLISHED" },
-      select: { slug: true, title: true, imageUrl: true },
-    });
-
-    if (existingArticles.length !== 3) {
-      return {
-        success: false,
-        error: "All 3 selected articles must be published in the database.",
-      };
-    }
-
-    if (!prisma.siteSetting) {
-      return { success: false, error: "SiteSetting model is initializing. Please try again." };
-    }
-
-    await prisma.siteSetting.upsert({
-      where: { key: "hero_articles" },
-      update: { value: JSON.stringify(slugs) },
-      create: { key: "hero_articles", value: JSON.stringify(slugs) },
-    });
-
-    // Revalidate home page and settings page
-    revalidatePath("/[lang]", "page"); // The home page, in every language.
-    revalidatePath("/admin/settings");
-
-    return { success: true, slugs };
-  } catch (error) {
-    console.error("updateHeroArticles error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update hero articles.",
-    };
+    console.error("updateHeaderMenus error:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to save the menu bar." };
   }
 }
 

@@ -3,7 +3,14 @@ import { getI18n } from "@/i18n/server";
 import type { Article } from "@/types/article";
 import { SectionHeader, sectionContainer } from "./SectionHeader";
 
-export async function EditorsPicks({ articles }: { articles: Article[] }) {
+type EditorsPicksProps = {
+  articles: Article[];
+  /** Admin overrides; empty uses the default wording. */
+  title?: string;
+  description?: string;
+};
+
+export async function EditorsPicks({ articles, title, description }: EditorsPicksProps) {
   if (articles.length === 0) return null;
   const { t } = await getI18n();
 
@@ -12,9 +19,8 @@ export async function EditorsPicks({ articles }: { articles: Article[] }) {
       <div className={sectionContainer}>
         <SectionHeader
           id="editors-picks-title"
-          title={t.home.editorsPicksTitle}
-          description={t.home.editorsPicksDescription}
-          action={{ label: t.common.viewAll, href: "/editors-picks" }}
+          title={title || t.home.editorsPicksTitle}
+          description={description || t.home.editorsPicksDescription}
         />
 
         {/* Swipeable on phones, 2×2 on tablet, one row of four on desktop. */}

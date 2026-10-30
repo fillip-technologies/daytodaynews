@@ -1,5 +1,42 @@
 /* Motion for homepage sections below the hero. */
 
+/* Breaking-news ticker: two copies of the list slide left by one copy's width. */
+.tickerWindow {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 calc(100% - 1.5rem), transparent);
+}
+
+.ticker {
+  animation: ticker var(--ticker-duration, 40s) linear infinite;
+}
+
+.ticker:hover,
+.ticker:focus-within {
+  animation-play-state: paused;
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Without motion the ticker is one still row that scrolls by hand. */
+@media (prefers-reduced-motion: reduce) {
+  .tickerWindow {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .ticker {
+    animation: none;
+  }
+
+  .ticker > :last-child {
+    display: none;
+  }
+}
+
 .fadeIn {
   animation: fade-in 300ms ease-out both;
 }

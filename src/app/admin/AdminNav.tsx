@@ -19,7 +19,7 @@ const navItems: Array<{ label: string; href: string; icon: string; adminOnly?: b
   { label: "Mega Menu", href: "/admin/menu", icon: "menu" },
   { label: "Users & Staff", href: "/admin/users", icon: "users" as const },
   { label: "Inbox & Leads", href: "/admin/inbox", icon: "mail" as const },
-  { label: "Site Configuration", href: "/admin/settings", icon: "settings" as const },
+  { label: "Homepage", href: "/admin/homepage", icon: "newspaper" },
   { label: "SEO", href: "/admin/seo", icon: "search", adminOnly: true },
 ];
 

@@ -15,7 +15,7 @@ export type FooterGroup = {
 };
 
 // Topics shown in the Explore column, in display order.
-export const exploreTopics = ["ai-automation", "software", "development", "business", "startups", "insights"];
+export const exploreTopics = ["ai-automation", "software", "development", "business", "startups", "insights", "resources"];
 
 /** Groups after Explore; titles and labels come from the dictionary. */
 export const footerGroups: Array<{

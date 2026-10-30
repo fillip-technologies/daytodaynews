@@ -727,7 +727,7 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
                 onChange={(e) => setFeatured(e.target.checked)}
                 className="size-4 rounded accent-primary"
               />
-              Featured Story (Hero highlight)
+              Featured (leads its category page)
             </label>
 
             <label className="flex items-center gap-3 text-xs font-medium text-text-primary cursor-pointer">
@@ -737,7 +737,7 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
                 onChange={(e) => setEditorsPick(e.target.checked)}
                 className="size-4 rounded accent-primary"
               />
-              Editor&apos;s Pick (Curated showcase)
+              Editor&apos;s Pick (offered first by Fill in Homepage → Editors&apos; Picks)
             </label>
 
             <label className="flex items-center gap-3 text-xs font-medium text-text-primary cursor-pointer">
@@ -747,7 +747,7 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
                 onChange={(e) => setTrending(e.target.checked)}
                 className="size-4 rounded accent-primary"
               />
-              Trending Now (Sidebar list)
+              Trending (ranks first on its category page; offered first by Fill in Homepage → Trending)
             </label>
           </div>
 

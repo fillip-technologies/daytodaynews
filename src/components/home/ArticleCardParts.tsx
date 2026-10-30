@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "@/i18n/Link";
 import { type ReactNode } from "react";
+import { CoverArt } from "@/components/blog/CoverArt";
 import { format } from "@/i18n/config";
 import { getI18n } from "@/i18n/server";
 import { formatDate, initials } from "@/lib/format";
@@ -18,36 +19,43 @@ const toneClasses: Record<CategoryTone, string> = {
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
 
-/** Fixed-ratio photo of the article with a subtle zoom on card hover. */
+/**
+ * Fixed-ratio photo of the article with a subtle zoom on card hover. Without a
+ * photo it shows the article's cover art, as listing cards do.
+ */
 export function CardMedia({
   article,
   priority,
   sizes,
+  compactCover,
   className,
   children,
 }: {
   article: Article;
   priority?: boolean;
   sizes: string;
+  /** Small slots: cover art without its background pattern. */
+  compactCover?: boolean;
   /** Aspect ratio and radius. */
   className?: string;
   /** Overlays, e.g. the category badge. */
   children?: ReactNode;
 }) {
-  const imageSrc = article.image?.src || FALLBACK_IMAGE;
-  const imageAlt = article.image?.alt || article.title;
-
   return (
     <div className={cn("relative isolate overflow-hidden bg-primary", className)}>
       <div className="absolute inset-0 -z-10 transition-transform duration-700 ease-out group-hover:scale-[1.03] motion-reduce:transition-none">
-        <Image
-          src={imageSrc}
-          alt={imageAlt}
-          fill
-          priority={priority}
-          sizes={sizes}
-          className="object-cover"
-        />
+        {!article.image && article.cover ? (
+          <CoverArt cover={article.cover} compact={compactCover} className="size-full" />
+        ) : (
+          <Image
+            src={article.image?.src || FALLBACK_IMAGE}
+            alt={article.image?.alt || article.title}
+            fill
+            priority={priority}
+            sizes={sizes}
+            className="object-cover"
+          />
+        )}
       </div>
       {children}
     </div>

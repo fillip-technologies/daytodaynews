@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/shruti singh/daytodaynews/**)",
+      "Bash(node -e ' *)",
+      "Bash(npx eslint *)",
+      "Bash(cd \"/c/Users/shruti singh/daytodaynews\" && grep -n \"export type Tone\\\\|export const tones\" -A3 src/lib/tones.ts; grep -n \"prisma.topic.create\" -B2 -A16 src/actions/categories.ts | head -40)",
+      "Bash(timeout 60 npx tsx -e 'import { DEFAULT_HEADER_MENUS, cleanHeaderMenus } from \"./src/lib/header-menu\"; const known = new Set\\(DEFAULT_HEADER_MENUS.flatMap\\(\\(m\\) => m.categories\\)\\); console.log\\(\"menus\", DEFAULT_HEADER_MENUS.length, JSON.stringify\\(cleanHeaderMenus\\(DEFAULT_HEADER_MENUS, known\\)\\).slice\\(0, 80\\)\\); console.log\\(JSON.stringify\\(cleanHeaderMenus\\([{labelEn:\"A\",categories:[\"technology\"]},{labelEn:\"B\",categories:[\"technology\"]}], known\\)\\)\\); console.log\\(JSON.stringify\\(cleanHeaderMenus\\([{categories:[\"nope\"]}], known\\)\\)\\);')",
+      "Bash(echo \"exit $?\")"
+    ]
+  }
+}

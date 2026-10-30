@@ -18,6 +18,17 @@ export type NavStory = {
   locale?: Locale;
 };
 
+/** One category in a mega menu: its page and its submenu topics. */
+export type NavGroup = {
+  label: string;
+  href: string;
+  category: string;
+  icon?: IconName;
+  description?: string;
+  topics: NavLink[];
+  articleCount: number;
+};
+
 export type NavItem = {
   label: string;
   href: string;
@@ -26,15 +37,13 @@ export type NavItem = {
   icon?: IconName;
   /** Short line shown under the label in the menu drawer. */
   description?: string;
-  /** Smallest breakpoint at which the item shows in the header bar (default "md"). */
-  showFrom?: "md" | "lg" | "xl";
-  /** Mega-menu content, filled in from live articles (see lib/navigation). */
-  topics?: NavLink[];
+  /** Mega-menu columns, one per category, filled in from live data (see lib/navigation). */
+  groups?: NavGroup[];
   stories?: NavStory[];
   articleCount?: number;
 };
 
-/** Primary categories — rendered by DesktopNav and the menu drawer. */
+/** Fallback header menus, used when the database can't be reached. */
 export const primaryNavigation: NavItem[] = [
   {
     label: "AI & Automation",
@@ -63,7 +72,6 @@ export const primaryNavigation: NavItem[] = [
     category: "business",
     icon: "briefcase",
     description: "B2B tech, hiring and outsourcing",
-    showFrom: "lg",
   },
   {
     label: "Startups",
@@ -71,7 +79,6 @@ export const primaryNavigation: NavItem[] = [
     category: "startups",
     icon: "rocket",
     description: "Founders, funding and product growth",
-    showFrom: "xl",
   },
   {
     label: "Insights",
@@ -79,16 +86,22 @@ export const primaryNavigation: NavItem[] = [
     category: "insights",
     icon: "lightbulb",
     description: "Analysis and technology trends",
-    showFrom: "xl",
   },
 ];
 
-/** Secondary links — shown only in the menu drawer; labels come from the dictionary. */
-export const secondaryNavigation: Array<{ key: keyof Dictionary["secondaryNav"]; href: string }> = [
-  { key: "latest", href: "/blog" },
-  { key: "newsletter", href: "/newsletter" },
+/**
+ * Utility links — the strip above the header and the menu drawer; labels come
+ * from the dictionary. Advertising and submissions use the existing contact and
+ * pitch forms until they have pages of their own.
+ */
+export const utilityNavigation: Array<{ key: keyof Dictionary["utilityNav"]; href: string }> = [
   { key: "about", href: "/about" },
+  { key: "editorialTeam", href: "/about#team-title" },
   { key: "writeForUs", href: "/write-for-us" },
+  { key: "advertise", href: "/contact" },
+  { key: "submitStartup", href: "/write-for-us#pitch-form-title" },
+  { key: "submitTool", href: "/write-for-us#pitch-form-title" },
+  { key: "newsletter", href: "/newsletter" },
   { key: "contact", href: "/contact" },
 ];
 

@@ -70,7 +70,7 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
         <JsonLd data={siteGraph(site, lang)} />
         <I18nProvider locale={lang} dictionary={dictionaries[lang]}>
           <BrandProvider logo={logo}>
-            <Header items={navigation.header} sections={navigation.sections} />
+            <Header items={navigation.header} />
             {children}
             <Footer sections={navigation.sections} credit={credit} socials={publisher.socials} />
           </BrandProvider>

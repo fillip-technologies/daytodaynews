@@ -16,6 +16,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:seed:hi": "tsx scripts/seed-topic-translations.ts",
     "db:seed:menu": "tsx scripts/seed-menu-topics.ts",
+    "db:seed:mega-menu": "tsx scripts/seed-mega-menu.ts",
     "db:studio": "prisma studio",
     "test:backend": "tsx scripts/test-backend.ts",
     "test:mail": "tsx scripts/test-mail.ts",

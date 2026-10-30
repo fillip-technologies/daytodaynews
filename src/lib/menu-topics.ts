@@ -4,7 +4,7 @@ import { cleanLine } from "@/lib/validation";
 // Sub-topics of a category's mega menu, as edited under Admin → Mega Menu.
 // Pure module: shared by the admin form (types, limits) and the server action.
 
-export const MAX_MENU_TOPICS = 12;
+export const MAX_MENU_TOPICS = 24;
 
 /** One row of the admin editor. */
 export type MenuTopicInput = {
