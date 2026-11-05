@@ -75,7 +75,7 @@ export default function AdminLoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@daytodaynews.com"
+                  placeholder="Your staff email"
                   className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-sm text-text-primary shadow-2xs transition-colors hover:border-text-muted/40 focus:border-primary focus:outline-none"
                 />
               </div>
@@ -114,12 +114,6 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-6 border-t border-border pt-4">
-            <p className="text-center text-xs text-text-muted">
-              Default Super Admin: <span className="font-mono text-text-primary">admin@daytodaynews.com</span>
-            </p>
-          </div>
         </div>
       </div>
     </div>

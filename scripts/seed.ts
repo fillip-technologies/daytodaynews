@@ -16,47 +16,40 @@ async function main() {
   const adminPasswordHash = await bcrypt.hash("Admin@2026!", 10);
   const authorPasswordHash = await bcrypt.hash("Author@2026!", 10);
 
-  // 1. Seed Super Admin
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@daytodaynews.com" },
-    update: {
-      name: "Super Admin",
-      role: "ADMIN",
-      passwordHash: adminPasswordHash,
-      isActive: true,
-      bio: "Master administrator for DayTodayNews platform operations.",
-    },
-    create: {
-      email: "admin@daytodaynews.com",
-      name: "Super Admin",
-      role: "ADMIN",
-      passwordHash: adminPasswordHash,
-      isActive: true,
-      bio: "Master administrator for DayTodayNews platform operations.",
-    },
-  });
-  console.log(`✓ Seeded Super Admin: ${admin.email} (Password: Admin@2026!)`);
+  // 1. Seed Super Admin, only on a fresh database. Once any admin exists, its
+  // login (changed under Admin → Users & Staff) is never reset or duplicated.
+  const existingAdmin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+  if (existingAdmin) {
+    console.log(`= Super Admin exists (${existingAdmin.email}), left unchanged`);
+  } else {
+    const admin = await prisma.user.create({
+      data: {
+        email: "admin@daytodaynews.com",
+        name: "Super Admin",
+        role: "ADMIN",
+        passwordHash: adminPasswordHash,
+        isActive: true,
+        bio: "Master administrator for DayTodayNews platform operations.",
+      },
+    });
+    console.log(`✓ Seeded Super Admin: ${admin.email} (change its password in Admin → Users & Staff)`);
+  }
 
-  // 2. Seed Default Author
-  const author = await prisma.user.upsert({
-    where: { email: "shruti@daytodaynews.com" },
-    update: {
-      name: "Shruti Singh",
-      role: "EDITOR",
-      passwordHash: authorPasswordHash,
-      isActive: true,
-      bio: "Editorial Director & Tech Analyst at DayTodayNews, covering artificial intelligence, cloud architecture, and modern product engineering.",
-    },
-    create: {
-      email: "shruti@daytodaynews.com",
-      name: "Shruti Singh",
-      role: "EDITOR",
-      passwordHash: authorPasswordHash,
-      isActive: true,
-      bio: "Editorial Director & Tech Analyst at DayTodayNews, covering artificial intelligence, cloud architecture, and modern product engineering.",
-    },
-  });
-  console.log(`✓ Seeded Editor: ${author.name} (${author.email})`);
+  // 2. Seed Default Author, the same way: an existing editor is reused as is.
+  const author =
+    (await prisma.user.findUnique({ where: { email: "shruti@daytodaynews.com" } })) ??
+    (await prisma.user.findFirst({ where: { role: "EDITOR" } })) ??
+    (await prisma.user.create({
+      data: {
+        email: "shruti@daytodaynews.com",
+        name: "Shruti Singh",
+        role: "EDITOR",
+        passwordHash: authorPasswordHash,
+        isActive: true,
+        bio: "Editorial Director & Tech Analyst at DayTodayNews, covering artificial intelligence, cloud architecture, and modern product engineering.",
+      },
+    }));
+  console.log(`✓ Editor for seeded articles: ${author.name} (${author.email})`);
 
   // 2. Seed Topics
   for (const topic of topics) {
