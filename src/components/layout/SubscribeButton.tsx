@@ -28,8 +28,8 @@ export function SubscribeButton({
       onClick={onClick}
       className={cn(
         "group inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-semibold",
-        "bg-accent text-surface-elevated transition-[translate,box-shadow] duration-150",
-        "hover:-translate-y-px hover:shadow-lg hover:shadow-accent/25 motion-reduce:hover:translate-y-0",
+        "bg-primary text-surface-elevated transition-[translate,box-shadow] duration-150",
+        "hover:bg-primary-hover hover:-translate-y-px hover:shadow-lg hover:shadow-primary/25 motion-reduce:hover:translate-y-0",
         "outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary",
         size === "sm" ? "h-10 px-4 text-sm" : "h-12 px-6 text-base",
         className,

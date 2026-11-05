@@ -45,7 +45,7 @@ export async function Pagination({ page, pageCount, hrefFor, className }: Pagina
         href={hrefFor(target)}
         rel={direction}
         aria-label={pageLabel}
-        className={cn(itemClass, "flex gap-1.5 border border-border bg-surface-elevated text-text-secondary hover:border-primary/30 hover:text-primary")}
+        className={cn(itemClass, "flex gap-1.5 border border-border bg-surface-elevated text-text-secondary hover:border-primary/30 hover:text-text-primary")}
       >
         {content}
       </Link>

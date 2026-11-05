@@ -14,6 +14,7 @@ import { SubscribeButton } from "./SubscribeButton";
 import { UtilityBar } from "./UtilityBar";
 
 import type { NavItem } from "@/config/navigation";
+import type { LocalizedLink } from "@/lib/site-links";
 
 const MENU_ID = "site-menu";
 
@@ -34,13 +35,15 @@ function useScrolled(threshold = 8) {
 type HeaderProps = {
   /** Menus for the header bar and the menu drawer. */
   items?: NavItem[];
+  /** Links of the strip above the header (Admin → Links & Footer), also in the menu drawer. */
+  utilityLinks: LocalizedLink[];
 };
 
 /**
  * Utility strip, then the brand row and the menu bar. From `lg` up the header
  * sticks at -4rem, so the brand row scrolls away and the menu bar stays.
  */
-export function Header({ items }: HeaderProps) {
+export function Header({ items, utilityLinks }: HeaderProps) {
   const { t } = useI18n();
   const scrolled = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -55,7 +58,7 @@ export function Header({ items }: HeaderProps) {
 
   return (
     <>
-      <UtilityBar className="hidden lg:block" />
+      <UtilityBar links={utilityLinks} className="hidden lg:block" />
       <header
         className={cn(
           "sticky top-0 z-40 border-b border-border transition-[background-color,box-shadow] duration-200 lg:-top-16",
@@ -101,7 +104,13 @@ export function Header({ items }: HeaderProps) {
 
         <DesktopNav items={items} className="hidden border-t border-border lg:block" />
 
-        <MobileNav id={MENU_ID} items={items} open={menuOpen} onClose={() => setMenuOpen(false)} />
+        <MobileNav
+          id={MENU_ID}
+          items={items}
+          utilityLinks={utilityLinks}
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+        />
       </header>
     </>
   );

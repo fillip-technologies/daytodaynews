@@ -27,7 +27,7 @@ export async function BreakingTicker({ title, articles }: { title?: string; arti
           href={article.href}
           tabIndex={copy ? -1 : undefined}
           lang={article.locale && article.locale !== locale ? article.locale : undefined}
-          className="rounded-sm text-sm font-medium whitespace-nowrap text-text-primary transition-colors hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+          className="rounded-sm text-sm font-medium whitespace-nowrap text-text-primary transition-colors hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
         >
           {article.title}
         </Link>

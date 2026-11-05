@@ -150,7 +150,7 @@ export function CoverImageUploader({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-primary transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-text-primary transition-colors disabled:opacity-50"
               >
                 <Icon name="refresh" className="size-3.5" />
                 Replace
@@ -214,7 +214,7 @@ export function CoverImageUploader({
         <button
           type="button"
           onClick={() => setShowUrlInput(!showUrlInput)}
-          className="text-[11px] font-semibold text-text-muted hover:text-primary transition-colors"
+          className="text-[11px] font-semibold text-text-muted hover:text-text-primary transition-colors"
         >
           {showUrlInput ? "− Hide Image URL field" : "+ Or enter direct image URL"}
         </button>

@@ -22,7 +22,7 @@ export function SecondaryArticleCard({ article, className }: SecondaryArticleCar
       </CardMedia>
 
       <div className="pt-4">
-        <h3 lang={article.locale} className="text-lg leading-snug font-semibold tracking-[-0.015em] text-balance text-text-primary transition-colors duration-200 group-hover:text-primary xl:text-xl">
+        <h3 lang={article.locale} className="text-lg leading-snug font-semibold tracking-[-0.015em] text-balance text-text-primary transition-colors duration-200 group-hover:text-text-primary xl:text-xl">
           <CardTitleLink article={article}>{article.title}</CardTitleLink>
         </h3>
         <div className="mt-2.5">

@@ -136,6 +136,23 @@ export function articleNode(site: SiteSeo, locale: Locale, article: ArticleSchem
   };
 }
 
+/** A fixed page (About, Contact, a legal page…), as part of the website. */
+export function webPageNode(
+  site: SiteSeo,
+  page: { type: string; url: string; name: string; description?: string | null; inLanguage: string },
+): Node {
+  return {
+    "@type": page.type,
+    "@id": page.url,
+    url: page.url,
+    name: page.name,
+    description: page.description || undefined,
+    inLanguage: page.inLanguage,
+    isPartOf: { "@id": websiteId(site) },
+    publisher: { "@id": publisherId(site) },
+  };
+}
+
 /** A category listing page. */
 export function collectionNode(
   site: SiteSeo,

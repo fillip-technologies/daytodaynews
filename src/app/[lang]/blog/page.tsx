@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "@/i18n/Link";
 import { BlogExplorer } from "@/components/blog/BlogExplorer";
 import { Newsletter } from "@/components/home/Newsletter";
+import { FixedPageJsonLd } from "@/components/seo/FixedPageJsonLd";
 import { getI18n } from "@/i18n/server";
 import { getBlogArticles, getTopics } from "@/lib/articles";
 import { parseBlogParams } from "@/lib/blog";
@@ -22,6 +23,7 @@ export default async function BlogPage({ searchParams }: PageProps<"/[lang]/blog
 
   return (
     <main className="flex-1">
+      <FixedPageJsonLd page="blog" />
       <div className="relative isolate">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] overflow-hidden">
           <div className="absolute -top-40 left-[8%] h-80 w-[36rem] rounded-full bg-accent-secondary/12 blur-3xl" />
@@ -34,7 +36,7 @@ export default async function BlogPage({ searchParams }: PageProps<"/[lang]/blog
             <nav aria-label="Breadcrumb">
               <ol className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em]">
                 <li>
-                  <Link href="/" className="text-text-muted transition-colors hover:text-primary">
+                  <Link href="/" className="text-text-muted transition-colors hover:text-text-primary">
                     DayTodayNews
                   </Link>
                 </li>

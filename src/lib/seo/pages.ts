@@ -10,7 +10,11 @@ export type SeoPage = {
   path: string;
   /** Name shown in the admin list. */
   label: string;
-  /** False for pages whose body text exists only in English (canonical points to /en). */
+  /**
+   * False for pages whose body text exists only in English (canonical points to
+   * /en). Pages edited under Admin → Pages ignore it: they count as translated
+   * once all their Hindi is filled in (see isFixedPageTranslated).
+   */
   translated: boolean;
   /** Not listed in the sitemap (e.g. search results). */
   hideFromSitemap?: boolean;

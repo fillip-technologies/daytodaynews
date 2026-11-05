@@ -14,6 +14,7 @@ import { ViewAllLink } from "./SectionHeader";
 type TrendingPostsProps = {
   posts: Article[];
   title?: string;
+  /** A "View all" link; there is no trending page, so it's off unless a page is given. */
   viewAllHref?: string;
   className?: string;
 };
@@ -22,7 +23,7 @@ type TrendingPostsProps = {
 export async function TrendingPosts({
   posts,
   title,
-  viewAllHref = "/trending",
+  viewAllHref,
   className,
 }: TrendingPostsProps) {
   if (posts.length === 0) return null;
@@ -78,7 +79,7 @@ export async function TrendingPosts({
                   </p>
                   <h3
                     lang={post.locale && post.locale !== locale ? post.locale : undefined}
-                    className="mt-1 line-clamp-2 text-sm leading-snug font-semibold text-text-primary transition-colors duration-200 group-hover:text-primary">
+                    className="mt-1 line-clamp-2 text-sm leading-snug font-semibold text-text-primary transition-colors duration-200 group-hover:text-text-primary">
                     <Link
                       href={post.href}
                       className="outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:after:outline-2 focus-visible:after:outline-primary"

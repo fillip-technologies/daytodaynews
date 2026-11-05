@@ -33,7 +33,7 @@ export function BlogGrid({ articles, total, onLoadMore, listRef, className }: Bl
           <button
             type="button"
             onClick={onLoadMore}
-            className="group inline-flex h-12 items-center gap-2 rounded-full border border-border bg-surface-elevated px-6 text-[0.9375rem] font-semibold text-text-primary shadow-sm transition-[border-color,box-shadow,color] duration-200 hover:border-primary/30 hover:text-primary hover:shadow-md hover:shadow-primary/10 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+            className="group inline-flex h-12 items-center gap-2 rounded-full border border-border bg-surface-elevated px-6 text-[0.9375rem] font-semibold text-text-primary shadow-sm transition-[border-color,box-shadow,color] duration-200 hover:border-primary/30 hover:text-text-primary hover:shadow-md hover:shadow-primary/10 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
           >
             {t.blog.loadMore}
             <span className="text-sm font-medium text-text-muted">({remaining})</span>

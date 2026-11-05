@@ -73,7 +73,7 @@ export async function TopStories({ title, articles, headlinesTitle, headlines }:
                     </p>
                     <h4
                       lang={article.locale && article.locale !== locale ? article.locale : undefined}
-                      className="mt-1 line-clamp-3 text-[0.9375rem] leading-snug font-semibold text-text-primary transition-colors group-hover:text-primary"
+                      className="mt-1 line-clamp-3 text-[0.9375rem] leading-snug font-semibold text-text-primary transition-colors group-hover:text-text-primary"
                     >
                       <Link
                         href={article.href}
@@ -107,7 +107,7 @@ function StoryRow({ article, locale }: { article: Article; locale: Locale }) {
         <p className="text-[0.6875rem] font-semibold tracking-[0.12em] text-primary uppercase">{article.category}</p>
         <h3
           lang={article.locale && article.locale !== locale ? article.locale : undefined}
-          className="mt-1 line-clamp-3 text-base leading-snug font-semibold tracking-[-0.01em] text-text-primary transition-colors group-hover:text-primary"
+          className="mt-1 line-clamp-3 text-base leading-snug font-semibold tracking-[-0.01em] text-text-primary transition-colors group-hover:text-text-primary"
         >
           <Link
             href={article.href}

@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Sheet } from "@/components/ui/Sheet";
-import { isActivePath, primaryNavigation, utilityNavigation, type NavGroup } from "@/config/navigation";
+import { isActivePath, primaryNavigation, type NavGroup } from "@/config/navigation";
+import type { LocalizedLink } from "@/lib/site-links";
 import { useI18n } from "@/i18n/client";
 import { format } from "@/i18n/config";
 import { cn } from "@/lib/cn";
@@ -19,24 +20,26 @@ type MobileNavProps = {
   id: string;
   /** The header menus; each one's topics expand in place. */
   items?: NavItem[];
+  /** The top strip's links (Admin → Links & Footer). */
+  utilityLinks: LocalizedLink[];
   open: boolean;
   onClose: () => void;
 };
 
 const rowLinkClass =
-  "block rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-text-primary/5 hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
+  "block rounded-lg px-3 py-2.5 text-sm text-text-secondary transition-colors hover:bg-text-primary/5 hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary";
 
 /**
  * Site menu drawer, the navigation below `lg`: the same menus as the header
  * bar, plus the utility links. Menus with topics expand accordion-style, which
  * works by touch; a menu spanning several categories lists each under its name.
  */
-export function MobileNav({ id, items, open, onClose }: MobileNavProps) {
+export function MobileNav({ id, items, utilityLinks, open, onClose }: MobileNavProps) {
   const { t } = useI18n();
   const pathname = usePathname();
   const navList = items && items.length > 0 ? items : primaryNavigation;
   const [expanded, setExpanded] = useState<string | null>(null);
-  const currentUtility = utilityNavigation.find((link) => isActivePath(pathname, link.href))?.key;
+  const currentUtility = utilityLinks.findIndex((link) => isActivePath(pathname, link.href));
 
   return (
     <Sheet id={id} open={open} onClose={onClose} label={t.header.siteMenu}>
@@ -117,7 +120,7 @@ export function MobileNav({ id, items, open, onClose }: MobileNavProps) {
                               <Link
                                 href={group.href}
                                 onClick={onClose}
-                                className="block rounded-lg px-3 pt-2.5 pb-1 text-xs font-semibold uppercase tracking-[0.1em] text-text-muted transition-colors hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+                                className="block rounded-lg px-3 pt-2.5 pb-1 text-xs font-semibold uppercase tracking-[0.1em] text-text-muted transition-colors hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
                               >
                                 {group.label}
                               </Link>
@@ -135,15 +138,15 @@ export function MobileNav({ id, items, open, onClose }: MobileNavProps) {
 
           <nav aria-label={t.header.utilityNav} className="mt-6 border-t border-border pt-5">
             <ul className="grid grid-cols-2 gap-1">
-              {utilityNavigation.map((link) => (
-                <li key={link.key}>
+              {utilityLinks.map((link, index) => (
+                <li key={`${index}:${link.href}`}>
                   <Link
                     href={link.href}
                     onClick={onClose}
-                    aria-current={link.key === currentUtility ? "page" : undefined}
+                    aria-current={index === currentUtility ? "page" : undefined}
                     className="block rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-text-primary/5 hover:text-text-primary aria-[current=page]:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
                   >
-                    {t.utilityNav[link.key]}
+                    {link.label}
                   </Link>
                 </li>
               ))}
@@ -192,7 +195,7 @@ function MenuRow({
             "grid size-9 shrink-0 place-items-center rounded-lg border transition-colors",
             active
               ? "border-transparent bg-primary text-surface-elevated"
-              : "border-border bg-surface text-text-secondary group-hover:text-primary",
+              : "border-border bg-surface text-text-secondary group-hover:text-text-primary",
           )}
         >
           <Icon name={icon} className="size-[18px]" />

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Newsletter } from "@/components/home/Newsletter";
+import { FixedPageJsonLd } from "@/components/seo/FixedPageJsonLd";
 import { StaticPageHero } from "@/components/static/StaticPageHero";
 import { getI18n } from "@/i18n/server";
 import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
@@ -13,6 +14,7 @@ export default async function NewsletterPage() {
   const { t } = await getI18n();
   return (
     <main className="flex-1">
+      <FixedPageJsonLd page="newsletter" />
       <StaticPageHero
         eyebrow={t.newsletter.pageEyebrow}
         title={

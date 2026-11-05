@@ -22,10 +22,11 @@ export function FooterLinks({ groups }: { groups: FooterGroup[] }) {
             </h2>
             <ul aria-labelledby={id} className="mt-4 space-y-1">
               {group.links.map((link) => (
-                <li key={link.href}>
+                // Two links can share a page (Contact and Advertise), so the label is part of the key.
+                <li key={`${link.label}:${link.href}`}>
                   <Link
                     href={link.href}
-                    className="inline-block rounded py-1.5 text-sm text-text-secondary transition-[color,translate] duration-200 hover:translate-x-0.5 hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:hover:translate-x-0"
+                    className="inline-block rounded py-1.5 text-sm text-text-secondary transition-[color,translate] duration-200 hover:translate-x-0.5 hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:hover:translate-x-0"
                   >
                     {link.label}
                   </Link>

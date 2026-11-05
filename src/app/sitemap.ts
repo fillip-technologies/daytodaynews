@@ -1,12 +1,15 @@
 import type { MetadataRoute } from "next";
 import { isLocale, locales, localizePath, type Locale } from "@/i18n/config";
 import { prisma } from "@/lib/prisma";
+import { isFixedPageTranslated } from "@/lib/seo/page-metadata";
 import { seoPages } from "@/lib/seo/pages";
 import { getSiteSeo } from "@/lib/seo/site";
 
 // /sitemap.xml: every indexable public URL in each language it exists in, with
 // hreflang alternates. Built per request so new articles and SEO changes in
 // admin show up immediately. Empty while "Allow search engines" is off.
+// Categories without a published article are left out (and noindex) until
+// their first article, so empty pages are never offered to search engines.
 export const dynamic = "force-dynamic";
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -28,7 +31,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let hidden = new Set<string>();
   try {
     const [topicRows, articleRows, noIndexRows] = await Promise.all([
-      prisma.topic.findMany({ select: { id: true, slug: true, updatedAt: true } }),
+      prisma.topic.findMany({
+        where: { articles: { some: { status: "PUBLISHED" } } },
+        select: { id: true, slug: true, updatedAt: true },
+      }),
       prisma.article.findMany({
         where: { status: "PUBLISHED" },
         orderBy: { publishedAt: "desc" },
@@ -60,8 +66,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   for (const page of seoPages) {
     if (page.hideFromSitemap) continue;
-    // English-only pages point their Hindi copy at English, so only /en is listed.
-    add(page.path, page.translated ? [...locales] : ["en"], page.key, {
+    // Until a page's Hindi is complete its Hindi copy points at English, so only /en is listed.
+    add(page.path, (await isFixedPageTranslated(page)) ? [...locales] : ["en"], page.key, {
       changeFrequency: page.key === "home" ? "daily" : "monthly",
       priority: page.key === "home" ? 1 : 0.5,
     });

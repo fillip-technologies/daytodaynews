@@ -20,6 +20,9 @@ const navItems: Array<{ label: string; href: string; icon: string; adminOnly?: b
   { label: "Users & Staff", href: "/admin/users", icon: "users" as const },
   { label: "Inbox & Leads", href: "/admin/inbox", icon: "mail" as const },
   { label: "Homepage", href: "/admin/homepage", icon: "newspaper" },
+  { label: "Pages", href: "/admin/pages", icon: "file-text" },
+  { label: "Links & Footer", href: "/admin/links", icon: "link" },
+  { label: "Site Text", href: "/admin/text", icon: "type" },
   { label: "SEO", href: "/admin/seo", icon: "search", adminOnly: true },
 ];
 

@@ -17,7 +17,13 @@ export type FooterGroup = {
 // Topics shown in the Explore column, in display order.
 export const exploreTopics = ["ai-automation", "software", "development", "business", "startups", "insights", "resources"];
 
-/** Groups after Explore; titles and labels come from the dictionary. */
+/**
+ * Groups after Explore; titles and labels come from the dictionary. Every link
+ * goes to a page or section that exists: Editors' Picks, Trending and Topics are
+ * homepage sections (a hidden section just lands on the homepage), guides are a
+ * search, advertising enquiries use the contact form, and cookies are a section
+ * of the privacy policy.
+ */
 export const footerGroups: Array<{
   id: keyof FooterText["groups"];
   tone: Tone;
@@ -27,11 +33,11 @@ export const footerGroups: Array<{
     id: "resources",
     tone: "primary",
     links: [
-      { key: "latestArticles", href: "/latest" },
-      { key: "editorsPicks", href: "/editors-picks" },
-      { key: "trending", href: "/trending" },
-      { key: "guides", href: "/guides" },
-      { key: "topics", href: "/topics" },
+      { key: "latestArticles", href: "/blog" },
+      { key: "editorsPicks", href: "/#editors-picks-title" },
+      { key: "trending", href: "/#trending-title" },
+      { key: "guides", href: "/search?q=guide" },
+      { key: "topics", href: "/#topic-strip-title" },
     ],
   },
   {
@@ -40,7 +46,7 @@ export const footerGroups: Array<{
     links: [
       { key: "about", href: "/about" },
       { key: "contact", href: "/contact" },
-      { key: "advertise", href: "/advertise" },
+      { key: "advertise", href: "/contact" },
       { key: "writeForUs", href: "/write-for-us" },
     ],
   },
@@ -50,7 +56,7 @@ export const footerGroups: Array<{
     links: [
       { key: "privacy", href: "/privacy-policy" },
       { key: "terms", href: "/terms" },
-      { key: "cookies", href: "/cookie-policy" },
+      { key: "cookies", href: "/privacy-policy#cookies" },
       { key: "disclaimer", href: "/disclaimer" },
     ],
   },

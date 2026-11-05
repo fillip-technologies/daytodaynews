@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import {
   DEFAULT_HEADER_MENUS,
@@ -8,6 +9,41 @@ import {
   type HeaderMenu,
 } from "@/lib/header-menu";
 import { buildStartingHomepage, HOMEPAGE_SETTING, parseHomepage, type HomeSection } from "@/lib/homepage";
+import { mergePageValues, pageSettingKey, type PageValues } from "@/lib/page-content";
+import { getPageSchema, pageDefaults } from "@/lib/page-defaults";
+import { defaultSiteLinks, parseSiteLinks, SITE_LINKS_SETTING, type SiteLinks } from "@/lib/site-links";
+import { parseTextOverrides, SITE_TEXT_SETTING, type TextOverrides } from "@/lib/site-text";
+
+/** A stored setting's raw value, or null when it is missing or can't be read. */
+async function readSetting(key: string): Promise<string | null> {
+  try {
+    const setting = await prisma.siteSetting.findUnique({ where: { key } });
+    return setting?.value ?? null;
+  } catch (error) {
+    console.error(`Failed to load the "${key}" setting:`, error);
+    return null;
+  }
+}
+
+/** Interface text changed under Admin → Site Text (memoized per request). */
+export const getSiteTextOverrides = cache(async (): Promise<TextOverrides> => {
+  const json = await readSetting(SITE_TEXT_SETTING);
+  return json ? parseTextOverrides(json) : {};
+});
+
+/** The top strip and footer links from Admin → Links & Footer, or the shipped ones. */
+export const getSiteLinks = cache(async (): Promise<SiteLinks> => {
+  const json = await readSetting(SITE_LINKS_SETTING);
+  return (json && parseSiteLinks(json)) || defaultSiteLinks();
+});
+
+/** A fixed page's content from Admin → Pages, over its shipped defaults. */
+export const getPageContent = cache(async (page: string): Promise<PageValues> => {
+  const schema = getPageSchema(page);
+  const defaults = pageDefaults[page] ?? {};
+  if (!schema) return defaults;
+  return mergePageValues(schema, defaults, await readSetting(pageSettingKey(page)));
+});
 
 export const DEFAULT_HERO_ARTICLE_SLUGS = [
   "ai-automation-agency-vs-in-house-ai-team--which-model-fits-your-business-",

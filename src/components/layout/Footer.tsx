@@ -1,40 +1,49 @@
 "use client";
 
-import { exploreTopics, footerGroups, type FooterGroup, type SocialLink } from "@/config/footerNavigation";
+import type { FooterGroup, SocialLink } from "@/config/footerNavigation";
 import type { NavItem } from "@/config/navigation";
-import { useI18n } from "@/i18n/client";
-import { toneStyle } from "@/lib/tones";
+import type { LocalizedFooterGroup } from "@/lib/site-links";
+import { toneStyle, type Tone } from "@/lib/tones";
 import { FooterBottomBar, type FooterCredit } from "./FooterBottomBar";
 import { FooterBrand } from "./FooterBrand";
 import { FooterLinks } from "./FooterLinks";
 
+/** The footer's link columns from Admin → Links & Footer, in the page's language. */
+export type FooterLinksData = {
+  exploreTitle: string;
+  exploreCategories: string[];
+  groups: LocalizedFooterGroup[];
+};
+
 type FooterProps = {
   /** The categories (in the page's language) for the Explore column. */
   sections?: NavItem[];
+  links: FooterLinksData;
   /** "Designed & Managed by" credit from Admin → SEO → Brand & Credits, or null when off. */
   credit?: FooterCredit | null;
   /** Social profiles set in admin; empty hides the row. */
   socials?: SocialLink[];
 };
 
-export function Footer({ sections = [], credit = null, socials = [] }: FooterProps) {
-  const { t } = useI18n();
+/** Marker-dot colors of the columns after Explore, in turn. */
+const GROUP_TONES: Tone[] = ["primary", "pink", "accent", "accent-secondary"];
 
+export function Footer({ sections = [], links, credit = null, socials = [] }: FooterProps) {
   const groups: FooterGroup[] = [
     {
       id: "explore",
-      title: t.footer.groups.explore,
+      title: links.exploreTitle,
       tone: "accent-secondary",
-      links: exploreTopics.flatMap((slug) => {
+      links: links.exploreCategories.flatMap((slug) => {
         const section = sections.find((item) => item.category === slug);
         return section ? [{ label: section.label, href: section.href }] : [];
       }),
     },
-    ...footerGroups.map((group) => ({
-      id: group.id,
-      title: t.footer.groups[group.id],
-      tone: group.tone,
-      links: group.links.map((link) => ({ label: t.footer.links[link.key], href: link.href })),
+    ...links.groups.map((group, index) => ({
+      id: `group-${index + 1}`,
+      title: group.title,
+      tone: GROUP_TONES[index % GROUP_TONES.length],
+      links: group.links,
     })),
   ];
 

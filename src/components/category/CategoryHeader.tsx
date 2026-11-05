@@ -20,7 +20,7 @@ export async function CategoryHeader({ category, articleCount, latestDate }: Cat
           <nav aria-label="Breadcrumb">
             <ol className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em]">
               <li>
-                <Link href="/blog" className="text-text-muted transition-colors hover:text-primary">
+                <Link href="/blog" className="text-text-muted transition-colors hover:text-text-primary">
                   {t.category.breadcrumb}
                 </Link>
               </li>

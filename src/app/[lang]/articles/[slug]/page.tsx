@@ -8,7 +8,7 @@ import { Newsletter } from "@/components/home/Newsletter";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Icon } from "@/components/ui/Icon";
 import { defaultLocale, format, isLocale, localizePath, locales, type Locale } from "@/i18n/config";
-import { dictionaries } from "@/i18n/dictionaries";
+import { getDictionary } from "@/i18n/server";
 import { getArticleBySlug, getPopularInCategory } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -35,8 +35,7 @@ async function canViewArticle(status: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await readParams(params);
-  const t = dictionaries[locale];
-  const [article, site] = await Promise.all([getArticleBySlug(slug, locale), getSiteSeo()]);
+  const [article, site, t] = await Promise.all([getArticleBySlug(slug, locale), getSiteSeo(), getDictionary(locale)]);
   if (!article || !(await canViewArticle(article.status))) {
     return { title: t.article.notFoundTitle, robots: { index: false, follow: false } };
   }
@@ -66,8 +65,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ArticlePage({ params }: Props) {
   const { slug, locale } = await readParams(params);
-  const t = dictionaries[locale];
-  const [article, site] = await Promise.all([getArticleBySlug(slug, locale), getSiteSeo()]);
+  const [article, site, t] = await Promise.all([getArticleBySlug(slug, locale), getSiteSeo(), getDictionary(locale)]);
 
   if (!article || !(await canViewArticle(article.status))) {
     notFound();
@@ -133,7 +131,7 @@ export default async function ArticlePage({ params }: Props) {
           <nav aria-label="Breadcrumb" className="mx-auto mb-6 max-w-[44rem]">
             <ol className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em]">
               <li>
-                <Link href="/" className="text-text-muted transition-colors hover:text-primary">
+                <Link href="/" className="text-text-muted transition-colors hover:text-text-primary">
                   {t.common.home}
                 </Link>
               </li>
@@ -143,7 +141,7 @@ export default async function ArticlePage({ params }: Props) {
               <li>
                 <Link
                   href={`/category/${article.topicSlug}`}
-                  className="text-text-muted transition-colors hover:text-primary"
+                  className="text-text-muted transition-colors hover:text-text-primary"
                 >
                   {article.topic.label}
                 </Link>
@@ -265,7 +263,7 @@ export default async function ArticlePage({ params }: Props) {
                       <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                         {rel.readTime ? format(t.common.minRead, { n: rel.readTime }) : null}
                       </p>
-                      <h3 lang={rel.locale} className="mt-2 text-base font-semibold text-text-primary group-hover:text-primary">
+                      <h3 lang={rel.locale} className="mt-2 text-base font-semibold text-text-primary group-hover:text-text-primary">
                         {rel.title}
                       </h3>
                     </div>

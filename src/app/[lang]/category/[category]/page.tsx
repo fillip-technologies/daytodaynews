@@ -9,7 +9,7 @@ import { getCategory, getCategoryByAlias, type Category } from "@/data/categorie
 import { getTopic } from "@/data/topics";
 import { cache } from "react";
 import { defaultLocale, format, isLocale, localizePath, type Locale } from "@/i18n/config";
-import { dictionaries } from "@/i18n/dictionaries";
+import { getDictionary } from "@/i18n/server";
 import { getCategoryListing, getPopularInCategory } from "@/lib/articles";
 import { parsePage } from "@/lib/pagination";
 import { buildMetadata, canonicalPath } from "@/lib/seo/metadata";
@@ -28,7 +28,7 @@ type ResolvedCategory = Category & { tone?: Tone; seo: CleanSeo | null };
 
 // Memoized per request: the page and its metadata both need the category.
 const resolveCategory = cache(async (slug: string, locale: Locale): Promise<ResolvedCategory | null> => {
-  const t = dictionaries[locale];
+  const t = await getDictionary(locale);
   try {
     // 1. Direct DB lookup by slug (e.g. "ai-automation", "software", "development", etc.),
     // 2. else a legacy alias (e.g. "software-development" -> "software").
@@ -73,12 +73,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   const locale = isLocale(lang) ? lang : defaultLocale;
   const [category, site] = await Promise.all([resolveCategory(slug, locale), getSiteSeo()]);
   if (!category) return {};
+  // An empty category page stays out of search results until its first article.
+  const published = await prisma.article
+    .count({ where: { topicSlug: category.topic, status: "PUBLISHED" } })
+    .catch(() => 1);
   return buildMetadata({
     locale,
     path: pageHref(category.slug, parsePage((await searchParams).page)),
     site,
     seo: category.seo,
-    auto: { title: category.seoTitle, description: category.seoDescription },
+    auto: { title: category.seoTitle, description: category.seoDescription, noIndex: published === 0 },
   });
 }
 
@@ -93,10 +97,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   }
 
   const requestedPage = parsePage((await searchParams).page);
-  const [listing, popular, site] = await Promise.all([
+  const [listing, popular, site, t] = await Promise.all([
     getCategoryListing(category.topic, requestedPage, locale),
     getPopularInCategory(category.topic, 5, locale),
     getSiteSeo(),
+    getDictionary(locale),
   ]);
   const tone = category.tone || (getTopic(category.topic)?.tone ?? "primary");
 
@@ -104,7 +109,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const structuredData = graph(
     collectionNode(site, locale, { url: pageUrl, name: category.name, description: category.description }),
     breadcrumbList([
-      { name: dictionaries[locale].common.home, url: absoluteUrl(site, localizePath("/", locale)) },
+      { name: t.common.home, url: absoluteUrl(site, localizePath("/", locale)) },
       { name: category.name, url: absoluteUrl(site, localizePath(`/category/${category.slug}`, locale)) },
     ]),
   );
@@ -126,7 +131,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           />
 
           {listing.featured && listing.page === 1 && (
-            <section aria-label={dictionaries[locale].common.featuredArticle} className="mt-10 sm:mt-12">
+            <section aria-label={t.common.featuredArticle} className="mt-10 sm:mt-12">
               <FeaturedArticle article={listing.featured} />
             </section>
           )}

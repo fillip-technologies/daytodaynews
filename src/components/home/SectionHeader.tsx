@@ -33,7 +33,7 @@ export function ViewAllLink({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href}
-      className="group inline-flex items-center gap-1.5 rounded-full py-1 text-sm font-semibold text-primary transition-colors hover:text-primary-hover outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+      className="group inline-flex items-center gap-1.5 rounded-full py-1 text-sm font-semibold text-primary transition-colors hover:text-text-primary outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
     >
       {label}
       <Icon

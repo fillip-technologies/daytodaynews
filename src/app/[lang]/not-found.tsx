@@ -13,7 +13,7 @@ export default async function NotFound() {
       <p className="mt-4 max-w-xl text-lg leading-8 text-text-secondary">{t.notFound.description}</p>
       <Link
         href="/"
-        className="mt-8 text-sm font-semibold text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:text-primary-hover hover:decoration-primary-hover"
+        className="mt-8 text-sm font-semibold text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:text-text-primary hover:decoration-primary-hover"
       >
         {t.notFound.back}
       </Link>

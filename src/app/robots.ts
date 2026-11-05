@@ -4,7 +4,8 @@ import { getSiteSeo } from "@/lib/seo/site";
 
 // /robots.txt, driven by Admin → SEO. With "Allow search engines" off it blocks
 // everything (useful for staging); otherwise it keeps crawlers out of the admin,
-// the API and search-result pages, plus any paths the admin lists.
+// the API and search-result pages, plus any paths the admin lists, and keeps
+// the crawlers the admin names out of the whole site.
 export const dynamic = "force-dynamic";
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
@@ -26,6 +27,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
           ...site.robotsDisallow,
         ],
       },
+      ...(site.robotsBlockedAgents.length > 0 ? [{ userAgent: site.robotsBlockedAgents, disallow: "/" }] : []),
     ],
     sitemap: [
       new URL("/sitemap.xml", site.siteUrl).toString(),

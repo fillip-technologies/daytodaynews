@@ -54,7 +54,7 @@ export async function CategoryArticles({
               <p className="font-medium text-text-primary">{format(t.category.empty, { category: categoryName })}</p>
               <p className="mt-1 text-sm text-text-muted">
                 {t.category.emptyLead}{" "}
-                <Link href="/blog" className="font-medium text-primary hover:text-primary-hover">
+                <Link href="/blog" className="font-medium text-primary hover:text-text-primary">
                   {t.category.emptyLink}
                 </Link>
                 .

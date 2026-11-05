@@ -41,7 +41,7 @@ export async function SearchEmptyState({ topics }: { topics: Topic[] }) {
             <li key={topic.slug}>
               <Link
                 href={topic.href || `/category/${topic.slug}`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface-elevated px-3.5 text-sm font-medium text-text-secondary transition-colors hover:border-primary/30 hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface-elevated px-3.5 text-sm font-medium text-text-secondary transition-colors hover:border-primary/30 hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
               >
                 {topic.icon && <Icon name={topic.icon} className="size-4" />}
                 {topic.label}

@@ -117,7 +117,7 @@ export default async function AdminDashboardPage() {
             <h2 className="text-base font-bold text-text-primary">Recent Articles</h2>
             <Link
               href="/admin/articles"
-              className="text-xs font-semibold text-primary hover:text-primary-hover"
+              className="text-xs font-semibold text-primary hover:text-text-primary"
             >
               View all
             </Link>
@@ -130,7 +130,7 @@ export default async function AdminDashboardPage() {
                   <Link
                     href={`/en/articles/${article.slug}`}
                     target="_blank"
-                    className="truncate text-sm font-semibold text-text-primary hover:text-primary"
+                    className="truncate text-sm font-semibold text-text-primary hover:text-text-primary"
                   >
                     {article.title}
                   </Link>
@@ -165,7 +165,7 @@ export default async function AdminDashboardPage() {
             <h2 className="text-base font-bold text-text-primary">Recent Inquiries</h2>
             <Link
               href="/admin/inbox"
-              className="text-xs font-semibold text-primary hover:text-primary-hover"
+              className="text-xs font-semibold text-primary hover:text-text-primary"
             >
               Inbox
             </Link>

@@ -1,5 +1,6 @@
 import { localizePath } from "@/i18n/config";
 import { getLatestArticles, getTopics } from "@/lib/articles";
+import { prisma } from "@/lib/prisma";
 import { getSiteSeo } from "@/lib/seo/site";
 import { absoluteUrl, siteDeveloper } from "@/lib/seo/structured-data";
 
@@ -15,7 +16,16 @@ export async function GET() {
   const site = await getSiteSeo();
   if (!site.allowIndexing) return new Response("Not found", { status: 404 });
 
-  const [topics, articles] = await Promise.all([getTopics("en"), getLatestArticles(25, "en")]);
+  const [allTopics, articles, withArticles] = await Promise.all([
+    getTopics("en"),
+    getLatestArticles(25, "en"),
+    prisma.article
+      .findMany({ where: { status: "PUBLISHED" }, select: { topicSlug: true }, distinct: ["topicSlug"] })
+      .then((rows) => new Set(rows.map((row) => row.topicSlug)))
+      .catch(() => null),
+  ]);
+  // Empty categories are left out, as in the sitemap.
+  const topics = withArticles ? allTopics.filter((topic) => withArticles.has(topic.slug)) : allTopics;
   const url = (path: string) => absoluteUrl(site, localizePath(path, "en"));
   const developer = siteDeveloper(site);
 

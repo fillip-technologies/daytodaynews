@@ -2,7 +2,7 @@ import ReactMarkdown from "react-markdown";
 import Link from "@/i18n/Link";
 
 const linkClass =
-  "font-medium text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:text-primary-hover hover:decoration-primary-hover";
+  "font-medium text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:text-text-primary hover:decoration-primary-hover";
 
 type ArticleContentProps = {
   content: string;

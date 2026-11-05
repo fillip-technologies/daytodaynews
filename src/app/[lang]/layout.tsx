@@ -7,8 +7,10 @@ import { Header } from "@/components/layout/Header";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { I18nProvider } from "@/i18n/client";
 import { isLocale, locales } from "@/i18n/config";
-import { dictionaries } from "@/i18n/dictionaries";
+import { getDictionary } from "@/i18n/server";
 import { getSiteNavigation } from "@/lib/navigation";
+import { getSiteLinks } from "@/lib/settings";
+import { localizeLinks, localizeText } from "@/lib/site-links";
 import { localeFromParams } from "@/lib/seo/page-metadata";
 import { getSiteSeo } from "@/lib/seo/site";
 import { siteDeveloper, siteGraph } from "@/lib/seo/structured-data";
@@ -45,7 +47,20 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
 
-  const [navigation, site] = await Promise.all([getSiteNavigation(lang), getSiteSeo()]);
+  const [navigation, site, dictionary, links] = await Promise.all([
+    getSiteNavigation(lang),
+    getSiteSeo(),
+    getDictionary(lang),
+    getSiteLinks(),
+  ]);
+  const footerLinks = {
+    exploreTitle: localizeText(links.exploreTitle, lang),
+    exploreCategories: links.exploreCategories,
+    groups: links.footerGroups.map((group) => ({
+      title: localizeText(group.title, lang),
+      links: localizeLinks(group.links, lang),
+    })),
+  };
   const { publisher } = site;
   const logo = {
     src: publisher.logoUrl,
@@ -68,11 +83,16 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
     <html lang={lang} className={`${fontVariables} h-full antialiased`}>
       <body className="flex min-h-full flex-col font-sans">
         <JsonLd data={siteGraph(site, lang)} />
-        <I18nProvider locale={lang} dictionary={dictionaries[lang]}>
+        <I18nProvider locale={lang} dictionary={dictionary}>
           <BrandProvider logo={logo}>
-            <Header items={navigation.header} />
+            <Header items={navigation.header} utilityLinks={localizeLinks(links.utility, lang)} />
             {children}
-            <Footer sections={navigation.sections} credit={credit} socials={publisher.socials} />
+            <Footer
+              sections={navigation.sections}
+              links={footerLinks}
+              credit={credit}
+              socials={publisher.socials}
+            />
           </BrandProvider>
         </I18nProvider>
         <Analytics gaId={site.analytics.gaId} gtmId={site.analytics.gtmId} />

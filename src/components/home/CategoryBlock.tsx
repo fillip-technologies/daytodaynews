@@ -60,7 +60,7 @@ export async function CategoryBlock({ id, title, href, icon, tone, articles }: C
             <div className="pt-5">
               <h3
                 lang={lead.locale}
-                className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-balance text-text-primary transition-colors group-hover:text-primary sm:text-[1.75rem]"
+                className="text-2xl leading-tight font-semibold tracking-[-0.02em] text-balance text-text-primary transition-colors group-hover:text-text-primary sm:text-[1.75rem]"
               >
                 <CardTitleLink article={lead}>{lead.title}</CardTitleLink>
               </h3>

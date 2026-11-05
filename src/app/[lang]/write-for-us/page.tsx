@@ -1,70 +1,69 @@
 import type { Metadata } from "next";
 import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
 import { sectionContainer } from "@/components/home/SectionHeader";
+import { FixedPageJsonLd } from "@/components/seo/FixedPageJsonLd";
 import { ContributorForm } from "@/components/static/ContributorForm";
 import { StaticPageHero } from "@/components/static/StaticPageHero";
 import { StaticSection } from "@/components/static/StaticSection";
 import { TopicGrid, type TopicGridItem } from "@/components/static/TopicGrid";
-import { Icon } from "@/components/ui/Icon";
+import { Icon, type IconName } from "@/components/ui/Icon";
+import { getI18n } from "@/i18n/server";
+import { resolvePage } from "@/lib/page-content";
+import { getPageContent } from "@/lib/settings";
+import type { Tone } from "@/lib/tones";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/write-for-us">): Promise<Metadata> {
   return fixedPageMetadata("write-for-us", await localeFromParams(params));
 }
 
-const topics: TopicGridItem[] = [
-  { label: "AI & Automation", description: "Agents, workflows and real use cases", icon: "sparkles", tone: "accent-secondary" },
-  { label: "Software Development", description: "Architecture, delivery and costs", icon: "layers", tone: "pink" },
-  { label: "Web & App Development", description: "Frameworks, performance and UX", icon: "code", tone: "primary" },
-  { label: "Business Technology", description: "Systems that help teams grow", icon: "briefcase", tone: "accent" },
-  { label: "Startups", description: "Stacks, teams and early decisions", icon: "rocket", tone: "pink" },
-  { label: "Hiring & Outsourcing", description: "Building and scaling tech teams", icon: "users", tone: "accent-secondary" },
-  { label: "Digital Growth", description: "SEO, content and conversion", icon: "chart", tone: "accent" },
-  { label: "Emerging Technology", description: "What is next, explained practically", icon: "lightbulb", tone: "primary" },
+// Topic card looks, in turn; the words come from Admin → Pages → Write for Us.
+const topicStyles: Array<{ icon: IconName; tone: Tone }> = [
+  { icon: "sparkles", tone: "accent-secondary" },
+  { icon: "layers", tone: "pink" },
+  { icon: "code", tone: "primary" },
+  { icon: "briefcase", tone: "accent" },
+  { icon: "rocket", tone: "pink" },
+  { icon: "users", tone: "accent-secondary" },
+  { icon: "chart", tone: "accent" },
+  { icon: "lightbulb", tone: "primary" },
 ];
 
-const goodSubmissions = [
-  { title: "Original and useful", body: "A fresh angle or first-hand experience readers can't find everywhere else." },
-  { title: "Well researched", body: "Claims are accurate, current and supported by reliable sources." },
-  { title: "Practical and actionable", body: "Readers finish with steps, frameworks or examples they can apply." },
-  { title: "Clear and easy to understand", body: "Plain language, logical structure and no unnecessary jargon." },
-  { title: "Relevant to our audience", body: "Written for technology and business readers making real decisions." },
-];
+export default async function WriteForUsPage() {
+  const { locale } = await getI18n();
+  const c = resolvePage(await getPageContent("write-for-us"), locale);
+  const topics: TopicGridItem[] = c.items("topics").map((topic, index) => ({
+    label: topic.label,
+    description: topic.description || undefined,
+    ...topicStyles[index % topicStyles.length],
+  }));
 
-const beforeYouSubmit = [
-  "Original content only: not published elsewhere, including your own site.",
-  "No plagiarism or AI-generated text passed off as original work.",
-  "No excessive promotional content or unnatural links.",
-  "Proper sources and attribution where necessary.",
-  "Clear structure: headings, short paragraphs and examples.",
-];
-
-export default function WriteForUsPage() {
   return (
     <main className="flex-1">
+      <FixedPageJsonLd page="write-for-us" />
       <StaticPageHero
-        eyebrow="Write for DayTodayNews"
+        eyebrow={c.text("heroEyebrow")}
         title={
           <>
-            Have an idea{" "}
-            <span className="bg-gradient-primary bg-clip-text text-transparent">worth sharing?</span>
+            {c.text("heroTitle")}{" "}
+            <span className="bg-gradient-primary bg-clip-text text-transparent">{c.text("heroHighlight")}</span>
           </>
         }
-        description="If you work with technology and know your subject well, we would love to hear your ideas. We are looking for practical, useful articles that help our readers make better decisions."
+        description={c.text("heroDescription")}
       />
 
       <StaticSection
         id="look-for-title"
-        title="What We Look For"
-        description="Topics our readers care about most."
+        title={c.text("lookForTitle")}
+        description={c.text("lookForDescription")}
         className="pt-14 sm:pt-20"
       >
         <TopicGrid items={topics} />
       </StaticSection>
 
-      <StaticSection id="good-submissions-title" title="Good Submissions">
+      <StaticSection id="good-submissions-title" title={c.text("goodTitle")}>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {goodSubmissions.map((item, i) => (
-            <li key={item.title} className="rounded-2xl border border-border bg-surface-elevated p-5">
+          {c.items("goodItems").map((item, i) => (
+            <li key={i} className="rounded-2xl border border-border bg-surface-elevated p-5">
               <span className="bg-gradient-primary bg-clip-text text-2xl font-semibold tabular-nums text-transparent">
                 {String(i + 1).padStart(2, "0")}
               </span>
@@ -81,14 +80,12 @@ export default function WriteForUsPage() {
             <div className="lg:sticky lg:top-28">
               <span aria-hidden="true" className="mb-3 block h-1 w-8 rounded-full bg-gradient-primary" />
               <h2 id="before-submit-title" className="text-2xl font-semibold tracking-[-0.02em] text-text-primary sm:text-[1.875rem]">
-                Before You Submit
+                {c.text("beforeTitle")}
               </h2>
-              <p className="mt-2 leading-relaxed text-text-secondary">
-                Please check your pitch against these guidelines.
-              </p>
+              <p className="mt-2 leading-relaxed text-text-secondary">{c.text("beforeDescription")}</p>
               <ul className="mt-6 space-y-3.5">
-                {beforeYouSubmit.map((item) => (
-                  <li key={item} className="flex gap-3">
+                {c.list("beforeList").map((item, index) => (
+                  <li key={index} className="flex gap-3">
                     <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-success/10 text-success">
                       <Icon name="check" className="size-3.5" />
                     </span>
@@ -104,11 +101,9 @@ export default function WriteForUsPage() {
             className="rounded-3xl border border-border bg-surface-elevated p-6 shadow-[0_24px_48px_-32px] shadow-primary/40 sm:p-8"
           >
             <h2 id="pitch-form-title" className="text-2xl font-semibold tracking-[-0.02em] text-text-primary">
-              Pitch your idea
+              {c.text("pitchTitle")}
             </h2>
-            <p className="mt-2 text-sm text-text-muted">
-              Share a short outline first; there is no need to send a full draft.
-            </p>
+            <p className="mt-2 text-sm text-text-muted">{c.text("pitchNote")}</p>
             <div className="mt-7">
               <ContributorForm topics={topics.map((topic) => topic.label)} />
             </div>

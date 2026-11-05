@@ -297,7 +297,7 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
                       <Link
                         href={`/en/articles/${a.slug}`}
                         target="_blank"
-                        className="font-semibold text-text-primary hover:text-primary line-clamp-2"
+                        className="font-semibold text-text-primary hover:text-text-primary line-clamp-2"
                       >
                         {a.title}
                       </Link>
@@ -396,14 +396,14 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
                           href={`/en/articles/${a.slug}`}
                           target="_blank"
                           title="Preview Live"
-                          className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary"
+                          className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-text-primary"
                         >
                           View
                         </Link>
                         <Link
                           href={`/admin/articles/${a.id}/edit`}
                           title="Edit Article"
-                          className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-text-primary transition-colors hover:border-primary/40 hover:text-primary"
+                          className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-text-primary transition-colors hover:border-primary/40 hover:text-text-primary"
                         >
                           Edit
                         </Link>
@@ -411,7 +411,7 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
                           disabled={busyId === a.id}
                           onClick={() => handleDuplicate(a.id)}
                           title="Duplicate Article as Draft"
-                          className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-50"
+                          className="rounded-lg border border-border px-2 py-1 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-text-primary disabled:opacity-50"
                         >
                           Clone
                         </button>

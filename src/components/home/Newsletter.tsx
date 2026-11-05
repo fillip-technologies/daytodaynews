@@ -93,7 +93,7 @@ export function Newsletter({ onSubscribe, title, description }: NewsletterProps)
                   <button
                     type="submit"
                     disabled={status === "submitting"}
-                    className="group inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-[0.9375rem] font-semibold text-surface-elevated shadow-md shadow-accent/25 transition-[translate,box-shadow] duration-200 hover:-translate-y-px hover:shadow-lg hover:shadow-accent/35 disabled:opacity-70 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:hover:translate-y-0"
+                    className="group inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-[0.9375rem] font-semibold text-surface-elevated shadow-md shadow-primary/25 transition-[translate,box-shadow] duration-200 hover:bg-primary-hover hover:-translate-y-px hover:shadow-lg hover:shadow-primary/35 disabled:opacity-70 outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary motion-reduce:hover:translate-y-0"
                   >
                     {t.newsletter.submit}
                     <Icon

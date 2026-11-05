@@ -82,6 +82,8 @@ export type SiteSeo = {
   allowIndexing: boolean;
   /** Extra robots.txt Disallow paths. */
   robotsDisallow: string[];
+  /** Crawlers (user-agent names, e.g. "GPTBot") kept out of the whole site in robots.txt. */
+  robotsBlockedAgents: string[];
   verification: { google: string; bing: string };
   analytics: { gaId: string; gtmId: string };
   publisher: PublisherSettings;
@@ -104,6 +106,7 @@ export const defaultSiteSeo: SiteSeo = {
   twitterHandle: "",
   allowIndexing: true,
   robotsDisallow: [],
+  robotsBlockedAgents: [],
   verification: { google: "", bing: "" },
   analytics: { gaId: "", gtmId: "" },
   publisher: {
@@ -175,6 +178,15 @@ function disallowPaths(value: unknown): string[] {
     .map((p) => cleanLine(p, 200).replace(/\s+/g, ""))
     .filter((p) => p.startsWith("/") && !p.startsWith("//"));
   return [...new Set(paths)].slice(0, 50);
+}
+
+/** User-agent names, one per line; "*" is left out, since "Allow search engines" covers every crawler. */
+function crawlerNames(value: unknown): string[] {
+  const list = Array.isArray(value) ? value : typeof value === "string" ? value.split(/\r?\n/) : [];
+  const names = list
+    .map((name) => cleanLine(name, 60).trim())
+    .filter((name) => /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name));
+  return [...new Set(names)].slice(0, 30);
 }
 
 const FOUNDING_DATE = /^\d{4}(-\d{2}(-\d{2})?)?$/;
@@ -375,6 +387,7 @@ export function cleanSiteSeo(input: unknown, current: SiteSeo): Result<SiteSeo> 
       twitterHandle: twitter ? `@${twitter.replace(/^@/, "")}` : "",
       allowIndexing: raw.allowIndexing !== false,
       robotsDisallow: disallowPaths(raw.robotsDisallow),
+      robotsBlockedAgents: crawlerNames(raw.robotsBlockedAgents),
       verification: { google, bing },
       analytics: { gaId, gtmId },
       publisher: publisher.value,

@@ -22,7 +22,7 @@ export function FooterBottomBar({ credit, socials }: { credit: FooterCredit | nu
             href={credit.url}
             target="_blank"
             rel="noopener"
-            className="group inline-flex w-fit items-center gap-2.5 rounded-md text-sm text-text-muted transition-colors hover:text-primary outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+            className="group inline-flex w-fit items-center gap-2.5 rounded-md text-sm text-text-muted transition-colors hover:text-text-primary outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
           >
             {credit.label}
             {credit.logoUrl ? (
@@ -38,7 +38,7 @@ export function FooterBottomBar({ credit, socials }: { credit: FooterCredit | nu
                 className="w-auto max-w-[70vw] object-contain transition-opacity duration-200 group-hover:opacity-80"
               />
             ) : (
-              <span className="font-semibold text-text-primary group-hover:text-primary">{credit.name}</span>
+              <span className="font-semibold text-text-primary group-hover:text-text-primary">{credit.name}</span>
             )}
           </a>
         )}

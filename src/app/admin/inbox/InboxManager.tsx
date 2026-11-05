@@ -440,7 +440,7 @@ export function InboxManager({ contacts, pitches, subscribers }: InboxManagerPro
 
                       {/* Subject & Message snippet */}
                       <td className="max-w-md px-5 py-3.5">
-                        <p className="font-semibold text-text-primary group-hover:text-primary transition-colors">
+                        <p className="font-semibold text-text-primary group-hover:text-text-primary transition-colors">
                           {msg.subject}
                         </p>
                         <p className="line-clamp-1 mt-0.5 text-[11px] text-text-muted">
@@ -469,7 +469,7 @@ export function InboxManager({ contacts, pitches, subscribers }: InboxManagerPro
 
                           <button
                             onClick={() => setSelectedContact(msg)}
-                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-primary"
+                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-text-primary"
                           >
                             View
                           </button>
@@ -622,7 +622,7 @@ export function InboxManager({ contacts, pitches, subscribers }: InboxManagerPro
 
                       {/* Idea & Snippet */}
                       <td className="max-w-md px-5 py-3.5">
-                        <p className="font-semibold text-text-primary group-hover:text-primary transition-colors">
+                        <p className="font-semibold text-text-primary group-hover:text-text-primary transition-colors">
                           {p.idea}
                         </p>
                         <p className="line-clamp-1 mt-0.5 text-[11px] text-text-muted">
@@ -651,7 +651,7 @@ export function InboxManager({ contacts, pitches, subscribers }: InboxManagerPro
 
                           <button
                             onClick={() => setSelectedPitch(p)}
-                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-primary"
+                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-primary hover:border-primary/40 hover:text-text-primary"
                           >
                             Review
                           </button>
@@ -760,7 +760,7 @@ export function InboxManager({ contacts, pitches, subscribers }: InboxManagerPro
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleCopyEmail(sub.email)}
-                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-secondary hover:border-primary/40 hover:text-primary transition-colors"
+                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-secondary hover:border-primary/40 hover:text-text-primary transition-colors"
                           >
                             Copy Email
                           </button>

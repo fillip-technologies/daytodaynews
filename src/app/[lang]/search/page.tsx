@@ -45,7 +45,7 @@ export default async function SearchPage({ searchParams }: Props) {
             <nav aria-label="Breadcrumb">
               <ol className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.14em]">
                 <li>
-                  <Link href="/" className="text-text-muted transition-colors hover:text-primary">
+                  <Link href="/" className="text-text-muted transition-colors hover:text-text-primary">
                     DayTodayNews
                   </Link>
                 </li>
@@ -74,7 +74,7 @@ export default async function SearchPage({ searchParams }: Props) {
                     key={term}
                     href={searchUrl({ query: term })}
                     lang="en"
-                    className="rounded-full border border-border bg-surface-elevated px-3 py-1.5 font-medium text-text-secondary transition-colors hover:border-primary/30 hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+                    className="rounded-full border border-border bg-surface-elevated px-3 py-1.5 font-medium text-text-secondary transition-colors hover:border-primary/30 hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     {term}
                   </Link>

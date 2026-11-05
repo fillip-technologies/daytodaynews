@@ -103,7 +103,7 @@ const SOCIAL_PLACEHOLDERS: Record<SocialNetwork, string> = {
 };
 
 const iconButton =
-  "grid size-9 shrink-0 place-items-center rounded-lg border border-border text-text-secondary hover:bg-background hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-secondary";
+  "grid size-9 shrink-0 place-items-center rounded-lg border border-border text-text-secondary hover:bg-background hover:text-text-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-secondary";
 
 /** The footer's social icons as an ordered list: pick a network, paste the link; add, reorder or remove rows. */
 function SocialLinksEditor({ value, onChange }: { value: SocialLink[]; onChange: (next: SocialLink[]) => void }) {
@@ -854,11 +854,29 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
               />
               <p className={hint}>Each line must start with /. To hide a single page, prefer its &quot;Hide from search engines&quot; option.</p>
             </div>
+            <div>
+              <label htmlFor="seo-blocked-agents" className={label}>Block these crawlers from the whole site (one per line)</label>
+              <textarea
+                id="seo-blocked-agents"
+                rows={4}
+                value={site.robotsBlockedAgents.join("\n")}
+                onChange={(e) => setSite((s) => ({ ...s, robotsBlockedAgents: e.target.value.split("\n") }))}
+                placeholder={"GPTBot\nCCBot"}
+                className={`${textarea} font-mono`}
+              />
+              <p className={hint}>
+                Crawler names as they appear in robots.txt, e.g. GPTBot (ChatGPT), CCBot (Common Crawl), Google-Extended
+                (Google AI). Leave empty to welcome every crawler: blocking AI crawlers also keeps the site out of those
+                assistants&apos; answers.
+              </p>
+            </div>
           </div>
           <div className={card}>
             <h2 className={cardTitle}>Sitemap</h2>
             <p className="text-xs leading-relaxed text-text-secondary">
-              Built automatically from all published articles, categories and pages in both languages. Pages marked
+              Built automatically from all published articles, the categories that have at least one published article
+              (empty ones are also kept out of search results until their first article) and the fixed pages. A fixed
+              page&apos;s Hindi address is listed once all its Hindi text is filled in under Admin → Pages. Pages marked
               &quot;Hide from search engines&quot; are left out. Submit this address in Google Search Console:
             </p>
             <p className="rounded-xl bg-background p-3 font-mono text-xs text-text-primary">{site.siteUrl}/sitemap.xml</p>

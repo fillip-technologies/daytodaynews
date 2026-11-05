@@ -72,7 +72,7 @@ export function ArticleCard({
       </div>
 
       <div className="flex flex-1 flex-col px-3 pt-4 pb-3">
-        <Heading lang={article.locale} className="text-[1.0625rem] leading-snug font-semibold tracking-[-0.01em] text-balance text-text-primary transition-colors duration-200 group-hover:text-primary">
+        <Heading lang={article.locale} className="text-[1.0625rem] leading-snug font-semibold tracking-[-0.01em] text-balance text-text-primary transition-colors duration-200 group-hover:text-text-primary">
           <Link
             href={article.href}
             className="outline-none after:absolute after:inset-0 after:rounded-2xl focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"

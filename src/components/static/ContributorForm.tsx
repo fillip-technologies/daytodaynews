@@ -1,24 +1,27 @@
 "use client";
 
 import { submitContributorPitch } from "@/actions/contribute";
+import { useI18n } from "@/i18n/client";
 import { UiForm, type FormFieldConfig } from "./UiForm";
 
+/** `topics` come from Admin → Pages → Write for Us; labels from Admin → Site Text. */
 export function ContributorForm({ topics }: { topics: string[] }) {
+  const t = useI18n().t.forms.pitch;
   const fields: FormFieldConfig[] = [
-    { name: "name", label: "Name", required: true, autoComplete: "name", placeholder: "Your name" },
-    { name: "email", label: "Email", type: "email", required: true, autoComplete: "email", placeholder: "you@company.com" },
-    { name: "topic", label: "Topic", type: "select", required: true, options: topics, placeholder: "Choose a topic" },
-    { name: "portfolio", label: "Portfolio / Website", type: "url", autoComplete: "url", placeholder: "yourwebsite.com" },
-    { name: "idea", label: "Article Idea", required: true, placeholder: "Working title or one-line pitch", fullWidth: true },
+    { name: "name", label: t.name, required: true, autoComplete: "name", placeholder: t.namePlaceholder },
+    { name: "email", label: t.email, type: "email", required: true, autoComplete: "email", placeholder: t.emailPlaceholder },
+    { name: "topic", label: t.topic, type: "select", required: true, options: topics, placeholder: t.topicPlaceholder },
+    { name: "portfolio", label: t.portfolio, type: "url", autoComplete: "url", placeholder: t.portfolioPlaceholder },
+    { name: "idea", label: t.idea, required: true, placeholder: t.ideaPlaceholder, fullWidth: true },
     {
       name: "message",
-      label: "Message",
+      label: t.message,
       type: "textarea",
       required: true,
       minLength: 40,
       rows: 6,
-      placeholder: "Outline the angle, who it helps and why you're the right person to write it.",
-      hint: "A short outline or a few key points is perfect.",
+      placeholder: t.messagePlaceholder,
+      hint: t.messageHint,
       fullWidth: true,
     },
   ];
@@ -32,9 +35,9 @@ export function ContributorForm({ topics }: { topics: string[] }) {
           throw new Error(res.error || "Failed to submit idea");
         }
       }}
-      submitLabel="Submit Idea"
-      successTitle="Thanks for your idea!"
-      successMessage="Your article pitch has been submitted. Our editorial team reviews submissions weekly."
+      submitLabel={t.submit}
+      successTitle={t.successTitle}
+      successMessage={t.successMessage}
     />
   );
 }

@@ -2,6 +2,9 @@
 
 import { useId, useRef, useState, type FormEvent } from "react";
 import { Icon } from "@/components/ui/Icon";
+import { useI18n } from "@/i18n/client";
+import { format } from "@/i18n/config";
+import type { Dictionary } from "@/i18n/dictionaries";
 import { cn } from "@/lib/cn";
 
 export type FormFieldConfig = {
@@ -32,22 +35,22 @@ type UiFormProps = {
   successMessage?: string;
 };
 
-function validate(field: FormFieldConfig, value: string): string | null {
+function validate(field: FormFieldConfig, value: string, t: Dictionary["forms"]): string | null {
   const trimmed = value.trim();
   if (!trimmed) {
     if (!field.required) return null;
     const label = field.label.toLowerCase();
-    return field.type === "select" ? `Please choose a ${label}.` : `Please enter your ${label}.`;
+    return format(field.type === "select" ? t.requiredChoice : t.required, { field: label });
   }
   if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-    return "Please enter a valid email address.";
+    return t.invalidEmail;
   }
   // Accepts "example.com" or "https://example.com/path".
   if (field.type === "url" && !/^(https?:\/\/)?[^\s/.]+(\.[^\s/.]+)+(\/\S*)?$/i.test(trimmed)) {
-    return "Please enter a valid website address.";
+    return t.invalidUrl;
   }
   if (field.minLength && trimmed.length < field.minLength) {
-    return `Please write at least ${field.minLength} characters.`;
+    return format(t.minLength, { n: field.minLength });
   }
   return null;
 }
@@ -64,6 +67,7 @@ export function UiForm({
   successTitle = "Thank you!",
   successMessage = "Online submissions are opening soon, so this message wasn't sent yet.",
 }: UiFormProps) {
+  const t = useI18n().t.forms;
   const formId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -78,7 +82,7 @@ export function UiForm({
     const values = valuesOf(form);
     const nextErrors: Record<string, string> = {};
     for (const field of fields) {
-      const error = validate(field, values[field.name]);
+      const error = validate(field, values[field.name], t);
       if (error) nextErrors[field.name] = error;
     }
     setErrors(nextErrors);
@@ -97,7 +101,7 @@ export function UiForm({
     if (!errors[field.name]) return;
     setErrors((current) => {
       const next = { ...current };
-      const error = validate(field, value);
+      const error = validate(field, value, t);
       if (error) next[field.name] = error;
       else delete next[field.name];
       return next;
@@ -115,9 +119,9 @@ export function UiForm({
         <button
           type="button"
           onClick={() => setStatus("idle")}
-          className="mt-5 text-sm font-semibold text-primary transition-colors hover:text-primary-hover outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
+          className="mt-5 text-sm font-semibold text-primary transition-colors hover:text-text-primary outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary"
         >
-          Start over
+          {t.startOver}
         </button>
       </div>
     );
@@ -148,7 +152,7 @@ export function UiForm({
           <div key={field.name} className={cn(field.fullWidth && "sm:col-span-2")}>
             <label htmlFor={id} className="flex items-baseline justify-between gap-3 text-sm font-medium text-text-primary">
               {field.label}
-              {!field.required && <span className="text-xs font-normal text-text-muted">Optional</span>}
+              {!field.required && <span className="text-xs font-normal text-text-muted">{t.optional}</span>}
             </label>
             <div className="mt-2">
               {field.type === "textarea" ? (
@@ -162,7 +166,7 @@ export function UiForm({
                 <div className="relative">
                   <select {...shared} defaultValue="" className={cn(shared.className, "h-12 appearance-none pr-10")}>
                     <option value="" disabled>
-                      {field.placeholder ?? "Select an option"}
+                      {field.placeholder ?? t.selectOption}
                     </option>
                     {field.options?.map((option) => (
                       <option key={option} value={option}>

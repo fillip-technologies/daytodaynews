@@ -412,7 +412,7 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
                         <Link
                           href={`/admin/articles`}
                           title="View articles in this topic"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/80 px-2.5 py-1 text-[11px] font-semibold text-text-primary transition-colors hover:border-primary/40 hover:text-primary"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/80 px-2.5 py-1 text-[11px] font-semibold text-text-primary transition-colors hover:border-primary/40 hover:text-text-primary"
                         >
                           <span>{c._count.articles}</span>
                           <span className="text-[10px] text-text-muted">articles</span>
@@ -429,7 +429,7 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => openEditModal(c)}
-                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-primary transition-colors hover:border-primary/40 hover:text-primary"
+                            className="rounded-lg border border-border px-2.5 py-1 text-xs font-semibold text-text-primary transition-colors hover:border-primary/40 hover:text-text-primary"
                           >
                             Edit
                           </button>

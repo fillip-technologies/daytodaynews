@@ -278,7 +278,7 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
           <div className="flex items-center gap-2">
             <Link
               href="/admin/articles"
-              className="text-xs font-semibold text-text-muted hover:text-primary"
+              className="text-xs font-semibold text-text-muted hover:text-text-primary"
             >
               ← Back to articles list
             </Link>
@@ -294,7 +294,7 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
               href={`/${language}/articles/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 text-xs font-semibold text-text-primary shadow-xs transition-colors hover:border-primary/40 hover:text-primary"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3.5 text-xs font-semibold text-text-primary shadow-xs transition-colors hover:border-primary/40 hover:text-text-primary"
             >
               👁️ View Live ↗
             </Link>
@@ -409,7 +409,7 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
                 <button
                   type="button"
                   onClick={generateSlug}
-                  className="text-[11px] font-semibold text-primary hover:text-primary-hover"
+                  className="text-[11px] font-semibold text-primary hover:text-text-primary"
                 >
                   Generate from title
                 </button>
@@ -790,7 +790,7 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
               href={`/${language}/articles/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-4 text-xs font-semibold text-text-primary shadow-xs transition-colors hover:border-primary/40 hover:text-primary"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-4 text-xs font-semibold text-text-primary shadow-xs transition-colors hover:border-primary/40 hover:text-text-primary"
             >
               👁️ View Live Article ↗
             </Link>

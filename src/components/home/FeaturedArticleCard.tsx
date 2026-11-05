@@ -23,7 +23,7 @@ export function FeaturedArticleCard({ article, className }: FeaturedArticleCardP
       </CardMedia>
 
       <div className="pt-5 sm:pt-6">
-        <h2 lang={article.locale} className="text-[1.75rem] leading-[1.12] font-semibold tracking-[-0.025em] text-balance text-text-primary transition-colors duration-200 group-hover:text-primary sm:text-4xl lg:text-[2.5rem]">
+        <h2 lang={article.locale} className="text-[1.75rem] leading-[1.12] font-semibold tracking-[-0.025em] text-balance text-text-primary transition-colors duration-200 group-hover:text-text-primary sm:text-4xl lg:text-[2.5rem]">
           <CardTitleLink article={article}>{article.title}</CardTitleLink>
         </h2>
         {article.description && (

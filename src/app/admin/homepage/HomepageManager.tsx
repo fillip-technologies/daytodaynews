@@ -56,7 +56,7 @@ const removeButtonClass =
 const primaryButtonClass =
   "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-xs font-semibold text-surface-elevated transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60";
 const secondaryButtonClass =
-  "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-elevated px-4 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-elevated px-4 text-xs font-semibold text-text-secondary transition-colors hover:border-primary/40 hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50";
 
 const { en, hi } = dictionaries;
 

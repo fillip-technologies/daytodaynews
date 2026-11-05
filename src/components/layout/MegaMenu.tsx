@@ -99,7 +99,7 @@ function GroupColumn({ group, id }: { group: NavGroup; id: string }) {
         <GroupIcon group={group} />
         <Link
           href={group.href}
-          className="rounded-sm text-base font-semibold tracking-[-0.01em] text-text-primary transition-colors hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+          className="rounded-sm text-base font-semibold tracking-[-0.01em] text-text-primary transition-colors hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
         >
           {group.label}
         </Link>
@@ -118,7 +118,7 @@ function TopicList({ group, labelledBy, className }: { group: NavGroup; labelled
         <li key={`${index}:${topic.href}`} className="break-inside-avoid">
           <Link
             href={topic.href}
-            className="block rounded-sm py-1.5 text-sm leading-snug text-text-secondary transition-colors hover:text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+            className="block rounded-sm py-1.5 text-sm leading-snug text-text-secondary transition-colors hover:text-text-primary outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
           >
             {topic.label}
           </Link>
@@ -143,7 +143,7 @@ function AllCoverage({ group, className }: { group: NavGroup; className?: string
     <Link
       href={group.href}
       className={cn(
-        "group inline-flex items-center gap-1.5 rounded-sm text-sm font-semibold text-primary transition-colors hover:text-primary-hover outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary",
+        "group inline-flex items-center gap-1.5 rounded-sm text-sm font-semibold text-primary transition-colors hover:text-text-primary outline-offset-4 focus-visible:outline-2 focus-visible:outline-primary",
         className,
       )}
     >
@@ -181,7 +181,7 @@ function StoryLink({ story }: { story: NavStory }) {
       <span className="min-w-0">
         <span
           lang={story.locale && story.locale !== locale ? story.locale : undefined}
-          className="line-clamp-2 text-sm leading-snug font-semibold text-text-primary transition-colors group-hover:text-primary"
+          className="line-clamp-2 text-sm leading-snug font-semibold text-text-primary transition-colors group-hover:text-text-primary"
         >
           {story.title}
         </span>

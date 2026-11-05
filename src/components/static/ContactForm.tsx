@@ -1,18 +1,19 @@
 "use client";
 
 import { submitContactForm } from "@/actions/contact";
+import { useI18n } from "@/i18n/client";
 import { UiForm, type FormFieldConfig } from "./UiForm";
 
-export const contactSubjects = ["General enquiry", "Editorial", "Partnerships", "Other"];
+/** `subjects` come from Admin → Pages → Contact; labels from Admin → Site Text. */
+export function ContactForm({ subjects }: { subjects: string[] }) {
+  const t = useI18n().t.forms.contact;
+  const fields: FormFieldConfig[] = [
+    { name: "name", label: t.name, required: true, autoComplete: "name", placeholder: t.namePlaceholder },
+    { name: "email", label: t.email, type: "email", required: true, autoComplete: "email", placeholder: t.emailPlaceholder },
+    { name: "subject", label: t.subject, type: "select", required: true, options: subjects, placeholder: t.subjectPlaceholder, fullWidth: true },
+    { name: "message", label: t.message, type: "textarea", required: true, minLength: 20, rows: 6, placeholder: t.messagePlaceholder, fullWidth: true },
+  ];
 
-const fields: FormFieldConfig[] = [
-  { name: "name", label: "Full Name", required: true, autoComplete: "name", placeholder: "Your name" },
-  { name: "email", label: "Email Address", type: "email", required: true, autoComplete: "email", placeholder: "you@company.com" },
-  { name: "subject", label: "Subject", type: "select", required: true, options: contactSubjects, placeholder: "What is this about?", fullWidth: true },
-  { name: "message", label: "Message", type: "textarea", required: true, minLength: 20, rows: 6, placeholder: "How can we help?", fullWidth: true },
-];
-
-export function ContactForm() {
   return (
     <UiForm
       fields={fields}
@@ -22,10 +23,10 @@ export function ContactForm() {
           throw new Error(res.error || "Failed to submit message");
         }
       }}
-      submitLabel="Send Message"
-      note="We'll get back to you as soon as possible."
-      successTitle="Thanks for reaching out!"
-      successMessage="Your message has been received. Our editorial team will get back to you shortly."
+      submitLabel={t.submit}
+      note={t.note}
+      successTitle={t.successTitle}
+      successMessage={t.successMessage}
     />
   );
 }
