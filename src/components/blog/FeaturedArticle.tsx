@@ -80,14 +80,24 @@ export function FeaturedArticle({ article }: { article: Article }) {
 
           <div className="mt-7 flex flex-wrap items-center justify-between gap-5">
             <div className="flex items-center gap-3">
-              <span
-                aria-hidden="true"
-                className="grid size-10 place-items-center rounded-full bg-gradient-primary text-xs font-semibold text-surface-elevated"
-              >
-                {initials(article.author)}
-              </span>
+              {article.author && (
+                <span
+                  aria-hidden="true"
+                  className="grid size-10 place-items-center rounded-full bg-gradient-primary text-xs font-semibold text-surface-elevated"
+                >
+                  {initials(article.author)}
+                </span>
+              )}
               <p className="text-sm leading-tight text-text-muted">
-                <span className="block font-medium text-text-primary">{format(t.common.by, { author: article.author })}</span>
+                {article.kind ? (
+                  <span className="block font-semibold uppercase tracking-wider text-warning">
+                    {article.kind === "sponsored" ? t.common.sponsored : t.common.guest}
+                  </span>
+                ) : (
+                  article.author && (
+                    <span className="block font-medium text-text-primary">{format(t.common.by, { author: article.author })}</span>
+                  )
+                )}
                 <span className="mt-1 block">
                   <time dateTime={article.date}>{formatDate(article.date, locale)}</time>
                   {article.readTime && <> · {format(t.common.minRead, { n: article.readTime })}</>}

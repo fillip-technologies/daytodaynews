@@ -17,6 +17,7 @@
     "db:seed:hi": "tsx scripts/seed-topic-translations.ts",
     "db:seed:menu": "tsx scripts/seed-menu-topics.ts",
     "db:seed:mega-menu": "tsx scripts/seed-mega-menu.ts",
+    "fix:dates": "tsx scripts/fix-future-dates.ts",
     "db:studio": "prisma studio",
     "test:backend": "tsx scripts/test-backend.ts",
     "test:mail": "tsx scripts/test-mail.ts",
@@ -38,7 +39,8 @@
     "nodemailer": "^10.1.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

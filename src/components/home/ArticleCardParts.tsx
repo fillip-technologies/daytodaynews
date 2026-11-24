@@ -94,7 +94,7 @@ export async function Byline({ article, showAvatar }: { article: Article; showAv
   const { locale, t } = await getI18n();
   return (
     <div className="flex min-w-0 items-center gap-3">
-      {showAvatar && (
+      {showAvatar && article.author && (
         <span
           aria-hidden="true"
           className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-primary text-xs font-semibold text-surface-elevated"
@@ -103,8 +103,21 @@ export async function Byline({ article, showAvatar }: { article: Article; showAv
         </span>
       )}
       <p className="min-w-0 truncate text-[0.8125rem] text-text-muted">
-        <span className="font-medium text-text-primary">{format(t.common.by, { author: article.author })}</span>
-        <span aria-hidden="true"> · </span>
+        {article.kind ? (
+          <>
+            <span className="font-semibold uppercase tracking-wider text-warning">
+              {article.kind === "sponsored" ? t.common.sponsored : t.common.guest}
+            </span>
+            <span aria-hidden="true"> · </span>
+          </>
+        ) : (
+          article.author && (
+            <>
+              <span className="font-medium text-text-primary">{format(t.common.by, { author: article.author })}</span>
+              <span aria-hidden="true"> · </span>
+            </>
+          )
+        )}
         <time dateTime={article.date}>{formatDate(article.date, locale)}</time>
         {article.readTime && (
           <>

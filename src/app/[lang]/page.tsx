@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Fragment } from "react";
+import { AdSlot } from "@/components/ads/AdSlot";
+import { sectionContainer } from "@/components/home/SectionHeader";
 import { BreakingTicker } from "@/components/home/BreakingTicker";
 import { CategoryBlock } from "@/components/home/CategoryBlock";
 import { EditorsPicks } from "@/components/home/EditorsPicks";
@@ -95,14 +97,23 @@ export default async function Home() {
     }
   }
 
+  const visible = sections.filter((section) => section.enabled);
+  const adAfter = visible.findIndex((section) => section.type !== "ticker");
+
   return (
     <main className="flex-1">
       <h1 className="sr-only">{t.home.heading}</h1>
-      {sections
-        .filter((section) => section.enabled)
-        .map((section) => (
-          <Fragment key={section.id}>{render(section)}</Fragment>
-        ))}
+      {visible.map((section, index) => (
+        <Fragment key={section.id}>
+          {render(section)}
+          {/* Admin → Ads → Homepage: after the first main section (below the ticker). */}
+          {index === adAfter && (
+            <div className={sectionContainer}>
+              <AdSlot placement="home" locale={locale} />
+            </div>
+          )}
+        </Fragment>
+      ))}
     </main>
   );
 }

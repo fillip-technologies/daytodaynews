@@ -14,11 +14,17 @@ type AdminNavProps = {
 
 const navItems: Array<{ label: string; href: string; icon: string; adminOnly?: boolean }> = [
   { label: "Dashboard", href: "/admin", icon: "chart" as const },
+  { label: "Editorial Plan", href: "/admin/plan", icon: "calendar-check" },
   { label: "Articles", href: "/admin/articles", icon: "layers" as const },
   { label: "Categories", href: "/admin/categories", icon: "sparkles" as const },
   { label: "Mega Menu", href: "/admin/menu", icon: "menu" },
   { label: "Users & Staff", href: "/admin/users", icon: "users" as const },
-  { label: "Inbox & Leads", href: "/admin/inbox", icon: "mail" as const },
+  { label: "Inbox", href: "/admin/inbox", icon: "mail" as const },
+  { label: "Leads", href: "/admin/leads", icon: "handshake" },
+  { label: "Directory", href: "/admin/directory", icon: "building-2" },
+  { label: "Newsletter", href: "/admin/newsletter", icon: "send" },
+  { label: "Ads", href: "/admin/ads", icon: "megaphone", adminOnly: true },
+  { label: "Redirects", href: "/admin/redirects", icon: "corner-up-right" },
   { label: "Homepage", href: "/admin/homepage", icon: "newspaper" },
   { label: "Pages", href: "/admin/pages", icon: "file-text" },
   { label: "Links & Footer", href: "/admin/links", icon: "link" },

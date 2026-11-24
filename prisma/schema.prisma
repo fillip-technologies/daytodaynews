@@ -17,8 +17,65 @@ enum Role {
 
 enum ArticleStatus {
   DRAFT
+  // Written, waiting for an editor's fact-check before publishing (never public).
+  IN_REVIEW
   PUBLISHED
   ARCHIVED
+}
+
+// Editorial articles, expert guest contributions and paid (sponsored) articles.
+// Sponsored ones are labelled on the site and their outbound links carry
+// rel="sponsored", as Google's link-spam policy requires for paid placements.
+enum ArticleType {
+  EDITORIAL
+  GUEST
+  SPONSORED
+}
+
+enum ListingKind {
+  BUSINESS
+  SOFTWARE
+  STARTUP
+}
+
+// Basic = free; Verified = details checked by the team; Featured = paid placement (labelled).
+enum ListingTier {
+  BASIC
+  VERIFIED
+  FEATURED
+}
+
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LeadType {
+  ADVERTISING
+  LISTING_ENQUIRY
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  FORWARDED
+  WON
+  CLOSED
+}
+
+enum PlanStatus {
+  IDEA
+  ASSIGNED
+  WRITING
+  REVIEW
+  SCHEDULED
+  PUBLISHED
+}
+
+enum PlanKind {
+  NEW
+  REFRESH
 }
 
 enum SubmissionStatus {
@@ -68,6 +125,16 @@ model Topic {
   translations TopicTranslation[]
   seo          SeoMeta[]
   menuTopics   MenuTopic[]
+  // Category page: longer introduction (markdown), shown on its first page.
+  intro       String?   @db.Text
+  // The category's pillar guide ("Start here"), an article slug.
+  pillarSlug  String?   @db.VarChar(191)
+  // Call to action at the end of its articles and on its page, e.g.
+  // "Find AI automation providers" → /business-directory?category=AI%20Automation
+  ctaTitle    String?   @db.VarChar(150)
+  ctaText     String?   @db.Text
+  ctaLabel    String?   @db.VarChar(80)
+  ctaHref     String?   @db.VarChar(2048)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -82,6 +149,10 @@ model TopicTranslation {
   locale      String   @db.VarChar(10)
   label       String
   description String?  @db.Text
+  intro       String?  @db.Text
+  ctaTitle    String?  @db.VarChar(150)
+  ctaText     String?  @db.Text
+  ctaLabel    String?  @db.VarChar(80)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -117,14 +188,40 @@ model Article {
 
   status        ArticleStatus @default(PUBLISHED)
   viewsCount    Int           @default(0)
+  // A published article with a future date is scheduled: it stays hidden until then.
   publishedAt   DateTime      @default(now())
+  // Last meaningful edit (text changed). Shown as "Updated", and used for
+  // dateModified and the sitemap. `updatedAt` also moves on view counts and
+  // flag toggles, so it is not used for that.
+  contentUpdatedAt DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  // Editorial framework (90-day plan): one focus keyword, key takeaways and FAQs.
+  focusKeyword  String?       @db.VarChar(150)
+  takeaways     String?       @db.Text // One point per line.
+  faq           String?       @db.Text // JSON: [{ "q": "...", "a": "..." }]
+
+  articleType   ArticleType   @default(EDITORIAL)
+  sponsorName   String?       @db.VarChar(150)
+  sponsorUrl    String?       @db.VarChar(2048)
+
+  // Topic clusters: a pillar guide, and the supporting articles that point to it.
+  isPillar      Boolean       @default(false)
+  pillarSlug    String?       @db.VarChar(191)
+
+  // Directory listings shown under the article (JSON array of listing slugs).
+  relatedListings String?     @db.Text
+  // Downloadable checklists/resources (JSON: [{ "label": "...", "url": "..." }]).
+  resources     String?       @db.Text
+
   translations  ArticleTranslation[]
   seo           SeoMeta[]
 
   @@index([topicSlug])
   @@index([publishedAt])
+  @@index([status, publishedAt])
+  @@index([pillarSlug])
   @@index([featured, editorsPick, trending])
   @@map("articles")
 }
@@ -138,6 +235,9 @@ model ArticleTranslation {
   title       String   @db.VarChar(255)
   description String?  @db.Text
   content     String?  @db.LongText
+  focusKeyword String? @db.VarChar(150)
+  takeaways   String?  @db.Text
+  faq         String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -251,4 +351,142 @@ model MenuTopic {
 
   @@index([topicId, sortOrder])
   @@map("menu_topics")
+}
+
+// A permanent (301) redirect from an old site path, e.g. after a slug change or
+// when two overlapping articles are merged. Paths are unprefixed ("/articles/x")
+// and apply in every language; the target is a site path or an https URL.
+model Redirect {
+  id        String   @id @default(cuid())
+  fromPath  String   @unique @db.VarChar(191)
+  toPath    String   @db.VarChar(2048)
+  note      String?  @db.VarChar(255)
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("redirects")
+}
+
+// An entry in the business, software or startup directory. Submitted from the
+// site as PENDING and published by staff; English only (global audience).
+model Listing {
+  id              String        @id @default(cuid())
+  kind            ListingKind
+  slug            String        @unique @db.VarChar(191)
+  name            String        @db.VarChar(150)
+  tagline         String?       @db.VarChar(255)
+  description     String?       @db.Text
+  logoUrl         String?       @db.VarChar(2048)
+  website         String?       @db.VarChar(2048)
+  // Enquiries from readers are forwarded to this address.
+  email           String?       @db.VarChar(254)
+  phone           String?       @db.VarChar(40)
+  country         String?       @db.VarChar(80)
+  city            String?       @db.VarChar(80)
+  // Industry / business category, or the software's product category.
+  category        String?       @db.VarChar(120)
+  // Products & services (business) or key features (software): one per line.
+  services        String?       @db.Text
+  specialties     String?       @db.Text
+  certifications  String?       @db.Text
+  pricingModel    String?       @db.VarChar(150)
+  platforms       String?       @db.VarChar(255)
+  // Screenshot image URLs, one per line.
+  screenshots     String?       @db.Text
+  useCases        String?       @db.Text
+  targetCustomers String?       @db.Text
+  // Alternatives, one name per line.
+  alternatives    String?       @db.Text
+  foundedYear     Int?
+  teamSize        String?       @db.VarChar(40)
+  stage           String?       @db.VarChar(60)
+  funding         String?       @db.VarChar(150)
+  tier            ListingTier   @default(BASIC)
+  status          ListingStatus @default(PENDING)
+  submitterName   String?       @db.VarChar(100)
+  submitterEmail  String?       @db.VarChar(254)
+  adminNotes      String?       @db.Text
+  approvedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  leads           Lead[]
+
+  @@index([kind, status, tier])
+  @@map("listings")
+}
+
+// A commercial enquiry: an advertiser, or a reader contacting a listed company.
+// `sourcePath` records the page the visitor came from (lead attribution).
+model Lead {
+  id          String     @id @default(cuid())
+  type        LeadType
+  name        String     @db.VarChar(100)
+  email       String     @db.VarChar(254)
+  company     String?    @db.VarChar(150)
+  phone       String?    @db.VarChar(40)
+  website     String?    @db.VarChar(2048)
+  interest    String?    @db.VarChar(150)
+  budget      String?    @db.VarChar(100)
+  message     String     @db.Text
+  listingId   String?
+  listing     Listing?   @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  sourcePath  String?    @db.VarChar(512)
+  status      LeadStatus @default(NEW)
+  forwardedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([type, status])
+  @@index([listingId])
+  @@map("leads")
+}
+
+// A newsletter edition composed and sent from Admin → Newsletter.
+model NewsletterIssue {
+  id           String    @id @default(cuid())
+  subject      String    @db.VarChar(200)
+  intro        String?   @db.Text
+  // JSON array of article slugs, in order.
+  articleSlugs String?   @db.Text
+  sponsorName  String?   @db.VarChar(150)
+  sponsorText  String?   @db.Text
+  sponsorUrl   String?   @db.VarChar(2048)
+  sentAt       DateTime?
+  recipients   Int       @default(0)
+  failed       Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("newsletter_issues")
+}
+
+// One row of the 90-day editorial plan (Admin → Editorial Plan): an article to
+// write or an existing one to refresh, with its keywords, people and status.
+model PlanItem {
+  id                String     @id @default(cuid())
+  number            Int?
+  kind              PlanKind   @default(NEW)
+  title             String     @db.VarChar(255)
+  focusKeyword      String?    @db.VarChar(150)
+  secondaryKeywords String?    @db.Text
+  category          String?    @db.VarChar(120)
+  wordTarget        Int?
+  month             Int?
+  dueDate           DateTime?
+  // Staff user ids (no foreign key: a removed user just shows as unassigned).
+  writerId          String?    @db.VarChar(191)
+  editorId          String?    @db.VarChar(191)
+  status            PlanStatus @default(IDEA)
+  articleSlug       String?    @db.VarChar(191)
+  metaTitle         String?    @db.VarChar(255)
+  metaDescription   String?    @db.Text
+  // JSON array of the finished checklist item keys.
+  checklist         String?    @db.Text
+  notes             String?    @db.Text
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([month, number])
+  @@map("plan_items")
 }

@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { seoCreate, seoUpdate } from "@/lib/seo/nested";
-import { cleanLocalizedSeo } from "@/lib/seo/validate";
+import { cleanLocalizedSeo, cleanSeoUrl } from "@/lib/seo/validate";
+import { recordMove } from "@/lib/redirects";
+import { cleanLine, cleanText } from "@/lib/validation";
 
 export type CategoryMutationResult = {
   success: boolean;
@@ -25,6 +27,59 @@ function translationData(input: TranslationInput) {
   return { label: input.label?.trim() ?? "", description: input.description?.trim() || null };
 }
 
+type Bilingual = { en?: string; hi?: string };
+
+/** Category page introduction, pillar guide and call to action, as the editor sends them. */
+type ExtrasInput = {
+  intro?: Bilingual;
+  pillarSlug?: string;
+  ctaTitle?: Bilingual;
+  ctaText?: Bilingual;
+  ctaLabel?: Bilingual;
+  ctaHref?: string;
+};
+
+type CleanExtras = {
+  en: {
+    intro: string | null;
+    pillarSlug: string | null;
+    ctaTitle: string | null;
+    ctaText: string | null;
+    ctaLabel: string | null;
+    ctaHref: string | null;
+  };
+  hi: { intro: string | null; ctaTitle: string | null; ctaText: string | null; ctaLabel: string | null };
+};
+
+async function cleanExtras(input: ExtrasInput | undefined): Promise<{ ok: true; value: CleanExtras } | { ok: false; error: string }> {
+  const x = input ?? {};
+  const pillarSlug = cleanLine(x.pillarSlug, 191).toLowerCase() || null;
+  if (pillarSlug && !(await prisma.article.findUnique({ where: { slug: pillarSlug }, select: { id: true } }))) {
+    return { ok: false, error: "The chosen pillar guide no longer exists." };
+  }
+  const href = cleanSeoUrl(cleanLine(x.ctaHref, 2048));
+  if (!href.ok) return { ok: false, error: "Call to action link: " + href.error };
+  return {
+    ok: true,
+    value: {
+      en: {
+        intro: cleanText(x.intro?.en, 5000) || null,
+        pillarSlug,
+        ctaTitle: cleanLine(x.ctaTitle?.en, 150) || null,
+        ctaText: cleanText(x.ctaText?.en, 500) || null,
+        ctaLabel: cleanLine(x.ctaLabel?.en, 80) || null,
+        ctaHref: href.value,
+      },
+      hi: {
+        intro: cleanText(x.intro?.hi, 5000) || null,
+        ctaTitle: cleanLine(x.ctaTitle?.hi, 150) || null,
+        ctaText: cleanText(x.ctaText?.hi, 500) || null,
+        ctaLabel: cleanLine(x.ctaLabel?.hi, 80) || null,
+      },
+    },
+  };
+}
+
 export async function createCategory(data: {
   label: string;
   slug: string;
@@ -34,12 +89,15 @@ export async function createCategory(data: {
   hi?: TranslationInput;
   /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
   seo?: unknown;
+  extras?: ExtrasInput;
 }): Promise<CategoryMutationResult> {
   try {
     await requireStaff();
 
     const seo = cleanLocalizedSeo(data.seo);
     if (!seo.ok) return { success: false, error: seo.error };
+    const extras = await cleanExtras(data.extras);
+    if (!extras.ok) return { success: false, error: extras.error };
 
     const label = data.label.trim();
     const slug = data.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -64,8 +122,9 @@ export async function createCategory(data: {
         href: `/category/${slug}`,
         icon,
         tone,
+        ...extras.value.en,
         translations: data.hi?.label?.trim()
-          ? { create: { locale: "hi", ...translationData(data.hi) } }
+          ? { create: { locale: "hi", ...translationData(data.hi), ...extras.value.hi } }
           : undefined,
         seo: seoCreate(seo.value),
       },
@@ -92,6 +151,7 @@ export async function updateCategory(
     hi?: TranslationInput;
     /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
     seo?: unknown;
+    extras?: ExtrasInput;
   }
 ): Promise<CategoryMutationResult> {
   try {
@@ -99,6 +159,9 @@ export async function updateCategory(
 
     const seo = cleanLocalizedSeo(data.seo);
     if (!seo.ok) return { success: false, error: seo.error };
+    const extrasResult = data.extras ? await cleanExtras(data.extras) : null;
+    if (extrasResult && !extrasResult.ok) return { success: false, error: extrasResult.error };
+    const extras = extrasResult?.ok ? extrasResult.value : null;
 
     const label = data.label.trim();
     const slug = data.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-");
@@ -126,6 +189,8 @@ export async function updateCategory(
         where: { topicSlug: existing.slug },
         data: { topicSlug: slug },
       });
+      // …and keep the old category address working.
+      await recordMove("/category/" + existing.slug, "/category/" + slug, "Category renamed: " + label);
     }
 
     await prisma.topic.update({
@@ -137,6 +202,7 @@ export async function updateCategory(
         href: `/category/${slug}`,
         icon,
         tone,
+        ...(extras ? extras.en : {}),
         // Hindi name: saved with the category, or removed when cleared.
         translations: !data.hi
           ? undefined
@@ -144,8 +210,8 @@ export async function updateCategory(
             ? {
                 upsert: {
                   where: { topicId_locale: { topicId: id, locale: "hi" } },
-                  update: translationData(data.hi),
-                  create: { locale: "hi", ...translationData(data.hi) },
+                  update: { ...translationData(data.hi), ...(extras ? extras.hi : {}) },
+                  create: { locale: "hi", ...translationData(data.hi), ...(extras ? extras.hi : {}) },
                 },
               }
             : { deleteMany: { locale: "hi" } },

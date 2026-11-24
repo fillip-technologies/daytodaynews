@@ -91,16 +91,15 @@ export const primaryNavigation: NavItem[] = [
 
 /**
  * Utility links — the strip above the header and the menu drawer; labels come
- * from the dictionary. Advertising and submissions use the existing contact and
- * pitch forms until they have pages of their own.
+ * from the dictionary. Submissions go to the directories' own forms.
  */
 export const utilityNavigation: Array<{ key: keyof Dictionary["utilityNav"]; href: string }> = [
   { key: "about", href: "/about" },
-  { key: "editorialTeam", href: "/about#team-title" },
+  { key: "editorialTeam", href: "/editorial-policy" },
   { key: "writeForUs", href: "/write-for-us" },
-  { key: "advertise", href: "/contact" },
-  { key: "submitStartup", href: "/write-for-us#pitch-form-title" },
-  { key: "submitTool", href: "/write-for-us#pitch-form-title" },
+  { key: "advertise", href: "/advertise" },
+  { key: "submitStartup", href: "/startup-directory/submit" },
+  { key: "submitTool", href: "/software-directory/submit" },
   { key: "newsletter", href: "/newsletter" },
   { key: "contact", href: "/contact" },
 ];

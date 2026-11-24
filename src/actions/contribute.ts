@@ -2,8 +2,9 @@
 
 import { prisma } from "@/lib/prisma";
 import { sendContributorNotification } from "@/lib/mail";
+import { deliverLead } from "@/lib/integrations";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { cleanEmail, cleanHttpUrl, cleanLine, cleanText, FORM_LIMITS } from "@/lib/validation";
+import { cleanEmail, cleanHttpUrl, cleanLine, cleanText, FORM_LIMITS, isHoneypotFilled } from "@/lib/validation";
 
 export type PitchResult = {
   success: boolean;
@@ -13,6 +14,7 @@ export type PitchResult = {
 const HOUR = 60 * 60 * 1000;
 
 export async function submitContributorPitch(values: Record<string, string>): Promise<PitchResult> {
+  if (isHoneypotFilled(values)) return { success: true };
   const name = cleanLine(values.name, FORM_LIMITS.name);
   const email = cleanEmail(values.email);
   const topic = cleanLine(values.topic, FORM_LIMITS.topic);
@@ -52,6 +54,7 @@ export async function submitContributorPitch(values: Record<string, string>): Pr
     sendContributorNotification({ name, email, topic, idea, message, portfolio }).catch((err) => {
       console.error("Failed to send contributor pitch email:", err);
     });
+    deliverLead({ event: "contributor_pitch", data: { name, email, topic, idea, message, portfolio } }).catch(() => {});
 
     return { success: true };
   } catch (error) {

@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default async function AdminCategoriesPage() {
-  const [categories, site] = await Promise.all([
+  const [categories, site, pillars] = await Promise.all([
     prisma.topic.findMany({
       orderBy: { label: "asc" },
       include: {
@@ -18,17 +18,21 @@ export default async function AdminCategoriesPage() {
         },
         translations: {
           where: { locale: "hi" },
-          select: { label: true, description: true },
+          select: { label: true, description: true, intro: true, ctaTitle: true, ctaText: true, ctaLabel: true },
         },
         seo: true,
       },
     }),
     getSiteSeo(),
+    prisma.article
+      .findMany({ where: { isPillar: true }, orderBy: { title: "asc" }, select: { slug: true, title: true } })
+      .catch(() => []),
   ]);
 
   return (
     <CategoryManager
       initialCategories={categories}
+      pillars={pillars.map((p) => ({ value: p.slug, label: p.title }))}
       seoContext={{ siteUrl: site.siteUrl, titleTemplate: site.titleTemplate }}
     />
   );

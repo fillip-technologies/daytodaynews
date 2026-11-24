@@ -3,9 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { Icon } from "@/components/ui/Icon";
 import { formatDate } from "@/lib/format";
+import { getPlanKpis } from "./plan-kpis";
 
 export default async function AdminDashboardPage() {
   const user = await getCurrentUser();
+
+  const kpis = await getPlanKpis();
 
   const [
     totalArticles,
@@ -87,6 +90,33 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* 90-day plan: weekly targets and the commercial pipeline */}
+      <section aria-labelledby="plan-kpis" className="rounded-2xl border border-border bg-surface-elevated p-5 shadow-2xs">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="plan-kpis" className="text-sm font-bold uppercase tracking-wider text-text-primary">
+            90-day plan
+          </h2>
+          <Link href="/admin/plan" className="text-xs font-semibold text-primary hover:text-text-primary">
+            Open editorial plan →
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {kpis.map((kpi) => (
+            <Link
+              key={kpi.label}
+              href={kpi.href}
+              className="rounded-xl border border-border bg-background p-4 transition-colors hover:border-primary/40"
+            >
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">{kpi.label}</p>
+              <p className={kpi.attention ? "mt-2 text-xl font-bold text-warning" : "mt-2 text-xl font-bold text-text-primary"}>
+                {kpi.value}
+              </p>
+              <p className="mt-0.5 text-[11px] text-text-muted">{kpi.detail}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* Metrics Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

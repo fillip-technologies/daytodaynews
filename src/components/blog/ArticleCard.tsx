@@ -88,7 +88,15 @@ export function ArticleCard({
 
         <div className="mt-auto flex items-center justify-between gap-3 pt-5">
           <p className="min-w-0 text-xs leading-tight text-text-muted">
-            <span className="block truncate font-medium text-text-secondary">{format(t.common.by, { author: article.author })}</span>
+            {article.kind ? (
+              <span className="block truncate font-semibold uppercase tracking-wider text-warning">
+                {article.kind === "sponsored" ? t.common.sponsored : t.common.guest}
+              </span>
+            ) : (
+              article.author && (
+                <span className="block truncate font-medium text-text-secondary">{format(t.common.by, { author: article.author })}</span>
+              )
+            )}
             <span className="mt-1 block truncate">
               <time dateTime={article.date}>{formatDate(article.date, locale)}</time>
               {article.readTime && <> · {format(t.common.minRead, { n: article.readTime })}</>}

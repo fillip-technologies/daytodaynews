@@ -1,4 +1,5 @@
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Link from "@/i18n/Link";
 
 const linkClass =
@@ -6,6 +7,11 @@ const linkClass =
 
 type ArticleContentProps = {
   content: string;
+  /**
+   * Paid article: links to other websites carry rel="sponsored", as Google
+   * requires for paid placements (no ranking credit is passed).
+   */
+  sponsored?: boolean;
 };
 
 /**
@@ -36,13 +42,21 @@ function normalizeArticleContent(raw: string): string {
   return processed;
 }
 
-export function ArticleContent({ content }: ArticleContentProps) {
+export function ArticleContent({ content, sponsored = false }: ArticleContentProps) {
   const normalizedContent = normalizeArticleContent(content);
 
   return (
     <div className="article-body">
       <ReactMarkdown
+        // GitHub-flavoured markdown: tables, strikethrough, task lists, bare links.
+        remarkPlugins={[remarkGfm]}
         components={{
+          // The page title is the only H1; a "# Heading" in the text becomes a section heading.
+          h1: ({ children }) => (
+            <h2 className="mt-10 mb-4 text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
+              {children}
+            </h2>
+          ),
           h2: ({ children }) => (
             <h2 className="mt-10 mb-4 text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
               {children}
@@ -53,6 +67,27 @@ export function ArticleContent({ content }: ArticleContentProps) {
               {children}
             </h3>
           ),
+          h4: ({ children }) => (
+            <h4 className="mt-6 mb-2 text-lg font-semibold tracking-tight text-text-primary">{children}</h4>
+          ),
+          // Comparison tables scroll sideways on phones instead of squeezing.
+          table: ({ children }) => (
+            <div className="my-8 overflow-x-auto rounded-2xl border border-border">
+              <table className="w-full min-w-[32rem] border-collapse text-left text-sm sm:text-base">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-surface-elevated">{children}</thead>,
+          th: ({ children, style }) => (
+            <th style={style} className="border-b border-border px-4 py-3 font-semibold text-text-primary">
+              {children}
+            </th>
+          ),
+          td: ({ children, style }) => (
+            <td style={style} className="border-b border-border px-4 py-3 align-top text-text-secondary">
+              {children}
+            </td>
+          ),
+          del: ({ children }) => <del className="text-text-muted">{children}</del>,
           p: ({ children }) => (
             <div className="mb-5 text-base leading-relaxed text-text-secondary sm:text-lg">
               {children}
@@ -88,7 +123,13 @@ export function ArticleContent({ content }: ArticleContentProps) {
                 {children}
               </Link>
             ) : (
-              <a href={href} className={linkClass}>
+              <a
+                href={href}
+                className={linkClass}
+                rel={
+                  /^https?:\/\//i.test(href ?? "") ? (sponsored ? "sponsored noopener" : "noopener") : undefined
+                }
+              >
                 {children}
               </a>
             ),

@@ -188,6 +188,165 @@ export const seoPages: SeoPage[] = [
   },
 ];
 
+// Commercial and trust pages of the 90-day plan. Directory pages show
+// listings in English only, so their Hindi copies point at English.
+seoPages.push(
+  {
+    key: "advertise",
+    path: "/advertise",
+    label: "Advertise",
+    translated: false,
+    defaults: {
+      en: {
+        title: "Advertise: Technology Website Advertising",
+        description:
+          "Sponsored technology articles, display advertising, newsletter sponsorship and product launches to reach founders, CTOs and business decision-makers.",
+      },
+      hi: {
+        title: "विज्ञापन दें",
+        description: "प्रायोजित लेख, डिस्प्ले विज्ञापन, न्यूज़लेटर स्पॉन्सरशिप और प्रोडक्ट लॉन्च के ज़रिए टेक्नोलॉजी और बिज़नेस के फ़ैसले लेने वालों तक पहुँचें।",
+      },
+    },
+  },
+  {
+    key: "editorial-policy",
+    path: "/editorial-policy",
+    label: "Editorial Policy",
+    translated: false,
+    defaults: {
+      en: {
+        title: "Editorial Policy",
+        description: "How DayTodayNews researches, writes, reviews and corrects its articles, and labels guest, sponsored and directory content.",
+      },
+      hi: {
+        title: "संपादकीय नीति",
+        description: "DayTodayNews लेखों पर रिसर्च, लेखन, समीक्षा और सुधार कैसे करता है, और अतिथि, प्रायोजित व डायरेक्टरी कंटेंट को कैसे लेबल करता है।",
+      },
+    },
+  },
+  {
+    key: "business-directory",
+    path: "/business-directory",
+    label: "Business Directory",
+    translated: false,
+    defaults: {
+      en: {
+        title: "Business Directory: Technology & IT Companies",
+        description:
+          "Online business directory of technology companies, software development firms, AI automation providers, IT service companies and digital agencies worldwide.",
+      },
+      hi: {
+        title: "बिज़नेस डायरेक्टरी",
+        description: "दुनिया भर की टेक्नोलॉजी कंपनियाँ, सॉफ़्टवेयर डेवलपमेंट फ़र्म, AI ऑटोमेशन प्रोवाइडर और IT सर्विस कंपनियाँ।",
+      },
+    },
+  },
+  {
+    key: "software-directory",
+    path: "/software-directory",
+    label: "Software Directory",
+    translated: false,
+    defaults: {
+      en: {
+        title: "Software Directory: SaaS & AI Tools",
+        description:
+          "Business software directory: SaaS products, AI tools, CRM, ERP and automation software with features, pricing models and alternatives.",
+      },
+      hi: {
+        title: "सॉफ़्टवेयर डायरेक्टरी",
+        description: "SaaS प्रोडक्ट, AI टूल, CRM, ERP और ऑटोमेशन सॉफ़्टवेयर, फ़ीचर, प्राइसिंग और विकल्पों के साथ।",
+      },
+    },
+  },
+  {
+    key: "startup-directory",
+    path: "/startup-directory",
+    label: "Startup Directory",
+    translated: false,
+    defaults: {
+      en: {
+        title: "Startup Directory",
+        description: "Discover technology startups in AI, SaaS, fintech, healthtech and more, from idea stage to growth.",
+      },
+      hi: {
+        title: "स्टार्टअप डायरेक्टरी",
+        description: "AI, SaaS, फ़िनटेक, हेल्थटेक और अन्य क्षेत्रों के टेक्नोलॉजी स्टार्टअप देखें।",
+      },
+    },
+  },
+  {
+    key: "business-directory-submit",
+    path: "/business-directory/submit",
+    label: "List Your Business",
+    translated: false,
+    defaults: {
+      en: {
+        title: "List Your Business in Our Online Business Directory",
+        description: "Add your company to the DayTodayNews business directory for free and receive enquiries from technology buyers.",
+      },
+      hi: { title: "अपना बिज़नेस लिस्ट करें", description: "अपनी कंपनी को DayTodayNews बिज़नेस डायरेक्टरी में मुफ़्त जोड़ें।" },
+    },
+  },
+  {
+    key: "software-directory-submit",
+    path: "/software-directory/submit",
+    label: "Submit a Tool",
+    translated: false,
+    defaults: {
+      en: {
+        title: "Submit Your Software or AI Tool",
+        description: "List your SaaS product or AI tool in the DayTodayNews software directory.",
+      },
+      hi: { title: "टूल सबमिट करें", description: "अपना SaaS प्रोडक्ट या AI टूल DayTodayNews सॉफ़्टवेयर डायरेक्टरी में लिस्ट करें।" },
+    },
+  },
+  {
+    key: "startup-directory-submit",
+    path: "/startup-directory/submit",
+    label: "Submit Your Startup",
+    translated: false,
+    defaults: {
+      en: {
+        title: "Submit Your Startup",
+        description: "Get your startup listed in the DayTodayNews startup directory for free.",
+      },
+      hi: { title: "अपना स्टार्टअप सबमिट करें", description: "अपना स्टार्टअप DayTodayNews स्टार्टअप डायरेक्टरी में मुफ़्त लिस्ट करें।" },
+    },
+  },
+  {
+    key: "sponsored-insights",
+    path: "/sponsored-insights",
+    label: "Sponsored Insights",
+    translated: true,
+    defaults: {
+      en: {
+        title: "Sponsored Insights",
+        description: "Brand-sponsored technology articles, case studies and product stories, clearly labelled and editorially reviewed.",
+      },
+      hi: {
+        title: "प्रायोजित इनसाइट्स",
+        description: "ब्रांड द्वारा प्रायोजित टेक्नोलॉजी लेख, केस स्टडी और प्रोडक्ट स्टोरीज़, साफ़ लेबल और संपादकीय समीक्षा के साथ।",
+      },
+    },
+  },
+  {
+    key: "guest-contributors",
+    path: "/guest-contributors",
+    label: "Guest Contributors",
+    translated: true,
+    defaults: {
+      en: {
+        title: "Guest Contributors",
+        description: "Practical technology and business articles written by industry experts, consultants and founders.",
+      },
+      hi: {
+        title: "अतिथि लेखक",
+        description: "इंडस्ट्री विशेषज्ञों, कंसल्टेंट और फ़ाउंडर्स के लिखे व्यावहारिक टेक्नोलॉजी और बिज़नेस लेख।",
+      },
+    },
+  },
+);
+
 export function getSeoPage(key: string): SeoPage | undefined {
   return seoPages.find((page) => page.key === key);
 }

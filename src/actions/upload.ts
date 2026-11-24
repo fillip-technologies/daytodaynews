@@ -124,3 +124,41 @@ export async function deleteCloudinaryImage(publicId: string): Promise<{ success
     return { success: false, error: String(error) };
   }
 }
+
+const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
+/**
+ * A PDF checklist or resource for an article's Downloads block. Only real PDFs
+ * (checked by their first bytes, not the file name) are accepted.
+ */
+export async function uploadDocument(formData: FormData): Promise<UploadResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== "ADMIN" && user.role !== "EDITOR")) {
+      return { success: false, error: "Unauthorized: Staff editorial access required to upload files." };
+    }
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) return { success: false, error: "Please select a PDF file." };
+    if (file.size > MAX_DOCUMENT_BYTES) return { success: false, error: "The PDF is larger than 10MB." };
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    if (buffer.subarray(0, 5).toString("latin1") !== "%PDF-") {
+      return { success: false, error: "Only PDF files can be uploaded as downloads." };
+    }
+    if (!process.env.CLOUDINARY_API_SECRET?.trim()) {
+      return { success: false, error: "Cloudinary is not configured (CLOUDINARY_API_SECRET)." };
+    }
+
+    const baseName = file.name.replace(/\.pdf$/i, "").replace(/[^a-zA-Z0-9-_]+/g, "-").slice(0, 60) || "download";
+    const uploadResponse = await cloudinary.uploader.upload(`data:application/pdf;base64,${buffer.toString("base64")}`, {
+      folder: "daytodaynews/downloads",
+      resource_type: "raw",
+      public_id: `${baseName}-${Date.now().toString(36)}.pdf`,
+      overwrite: false,
+    });
+    return { success: true, url: uploadResponse.secure_url, publicId: uploadResponse.public_id };
+  } catch (error) {
+    console.error("Document upload failed:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Failed to upload the PDF." };
+  }
+}

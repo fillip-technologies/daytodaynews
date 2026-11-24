@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { useI18n } from "@/i18n/client";
+import { trackEvent } from "@/lib/analytics";
 import { toneColor, toneStyle } from "@/lib/tones";
 import styles from "./home.module.css";
 import { sectionContainer } from "./SectionHeader";
@@ -31,8 +32,13 @@ export function Newsletter({ onSubscribe, title, description }: NewsletterProps)
     if (onSubscribe) {
       await onSubscribe(email);
     } else {
-      await subscribeNewsletter(email);
+      const res = await subscribeNewsletter(email).catch(() => null);
+      if (!res?.success) {
+        setStatus("idle");
+        return;
+      }
     }
+    trackEvent("sign_up", { method: "newsletter" });
     setStatus("done");
   }
 

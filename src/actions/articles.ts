@@ -3,9 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  cleanFaq,
+  cleanResources,
+  cleanSlugList,
+  cleanTakeaways,
+  EXTRA_LIMITS,
+} from "@/lib/article-extras";
+import { recordMove } from "@/lib/redirects";
 import { seoCreate, seoUpdate } from "@/lib/seo/nested";
 import { cleanLocalizedSeo } from "@/lib/seo/validate";
-import type { ArticleStatus } from "@/generated/prisma";
+import { cleanHttpUrl, cleanLine } from "@/lib/validation";
+import type { ArticleStatus, ArticleType } from "@/generated/prisma";
 
 export type ArticleMutationResult = {
   success: boolean;
@@ -14,25 +23,17 @@ export type ArticleMutationResult = {
 };
 
 /** Text of an article in another language; an empty title means "no translation". */
-type TranslationInput = { title?: string; description?: string | null; content?: string | null };
+type TranslationInput = {
+  title?: string;
+  description?: string | null;
+  content?: string | null;
+  focusKeyword?: string | null;
+  takeaways?: string | null;
+  faq?: unknown;
+};
 
-function translationData(input: TranslationInput) {
-  return {
-    title: input.title?.trim() ?? "",
-    description: input.description?.trim() || null,
-    content: input.content?.trim() || null,
-  };
-}
-
-async function requireStaff() {
-  const current = await getCurrentUser();
-  if (!current || (current.role !== "ADMIN" && current.role !== "EDITOR")) {
-    throw new Error("Unauthorized: Staff editorial access required.");
-  }
-  return current;
-}
-
-export async function createArticle(data: {
+/** Everything the article editor sends. */
+type ArticleInput = {
   title: string;
   slug: string;
   topicSlug: string;
@@ -44,15 +45,102 @@ export async function createArticle(data: {
   editorsPick?: boolean;
   trending?: boolean;
   status?: ArticleStatus;
+  /** ISO date-time; a future one schedules the article. Empty: now (new) / unchanged (edit). */
+  publishedAt?: string | null;
   coverPattern?: string;
   coverTones?: string;
   coverIcon?: string;
   imageUrl?: string;
   imageAlt?: string;
+  focusKeyword?: string | null;
+  takeaways?: string | null;
+  faq?: unknown;
+  articleType?: ArticleType;
+  sponsorName?: string | null;
+  sponsorUrl?: string | null;
+  isPillar?: boolean;
+  pillarSlug?: string | null;
+  relatedListings?: unknown;
+  resources?: unknown;
   hi?: TranslationInput;
   /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
   seo?: unknown;
-}): Promise<ArticleMutationResult> {
+};
+
+const ARTICLE_TYPES: ArticleType[] = ["EDITORIAL", "GUEST", "SPONSORED"];
+const STATUSES: ArticleStatus[] = ["DRAFT", "IN_REVIEW", "PUBLISHED", "ARCHIVED"];
+
+function translationData(input: TranslationInput) {
+  return {
+    title: input.title?.trim() ?? "",
+    description: input.description?.trim() || null,
+    content: input.content?.trim() || null,
+    focusKeyword: cleanLine(input.focusKeyword, EXTRA_LIMITS.focusKeyword) || null,
+    takeaways: cleanTakeaways(input.takeaways),
+    faq: cleanFaq(input.faq),
+  };
+}
+
+async function requireStaff() {
+  const current = await getCurrentUser();
+  if (!current || (current.role !== "ADMIN" && current.role !== "EDITOR")) {
+    throw new Error("Unauthorized: Staff editorial access required.");
+  }
+  return current;
+}
+
+type Result<T> = { ok: true; value: T } | { ok: false; error: string };
+
+/** A publish date from the editor, or null for "not given". */
+function parsePublishDate(value: string | null | undefined): Result<Date | null> {
+  if (!value) return { ok: true, value: null };
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { ok: false, error: "The publish date is not a valid date." };
+  const year = date.getUTCFullYear();
+  if (year < 2000 || year > 2100) return { ok: false, error: "The publish date is out of range." };
+  return { ok: true, value: date };
+}
+
+/** The editorial-framework fields shared by create and update, validated. */
+async function extrasData(data: ArticleInput, slug: string) {
+  const articleType = ARTICLE_TYPES.find((t) => t === data.articleType) ?? "EDITORIAL";
+  const sponsorName = cleanLine(data.sponsorName, 150) || null;
+  const sponsorUrlTyped = cleanLine(data.sponsorUrl, 2048);
+  const sponsorUrl = sponsorUrlTyped ? cleanHttpUrl(sponsorUrlTyped) : null;
+  if (articleType === "SPONSORED" && !sponsorName) {
+    return { ok: false as const, error: "A sponsored article needs the sponsor's name (it is shown to readers)." };
+  }
+  if (sponsorUrlTyped && !sponsorUrl) return { ok: false as const, error: "Sponsor website must start with https://" };
+
+  const isPillar = Boolean(data.isPillar);
+  let pillarSlug = isPillar ? null : cleanLine(data.pillarSlug, 191).toLowerCase() || null;
+  if (pillarSlug === slug) pillarSlug = null;
+  if (pillarSlug) {
+    const pillar = await prisma.article.findUnique({ where: { slug: pillarSlug }, select: { id: true } });
+    if (!pillar) return { ok: false as const, error: `The pillar guide "${pillarSlug}" does not exist.` };
+  }
+
+  const resources = cleanResources(data.resources);
+  if (!resources.ok) return { ok: false as const, error: resources.error };
+
+  return {
+    ok: true as const,
+    value: {
+      focusKeyword: cleanLine(data.focusKeyword, EXTRA_LIMITS.focusKeyword) || null,
+      takeaways: cleanTakeaways(data.takeaways),
+      faq: cleanFaq(data.faq),
+      articleType,
+      sponsorName: articleType === "SPONSORED" ? sponsorName : null,
+      sponsorUrl: articleType === "SPONSORED" ? sponsorUrl : null,
+      isPillar,
+      pillarSlug,
+      relatedListings: cleanSlugList(data.relatedListings, EXTRA_LIMITS.listings),
+      resources: resources.value,
+    },
+  };
+}
+
+export async function createArticle(data: ArticleInput): Promise<ArticleMutationResult> {
   try {
     const staff = await requireStaff();
 
@@ -65,6 +153,11 @@ export async function createArticle(data: {
     if (!title || !slug || !data.topicSlug) {
       return { success: false, error: "Title, slug, and topic are required." };
     }
+
+    const publishedAt = parsePublishDate(data.publishedAt);
+    if (!publishedAt.ok) return { success: false, error: publishedAt.error };
+    const extras = await extrasData(data, slug);
+    if (!extras.ok) return { success: false, error: extras.error };
 
     const existing = await prisma.article.findUnique({ where: { slug } });
     if (existing) {
@@ -88,13 +181,14 @@ export async function createArticle(data: {
         featured: Boolean(data.featured),
         editorsPick: Boolean(data.editorsPick),
         trending: Boolean(data.trending),
-        status: data.status || "PUBLISHED",
+        status: STATUSES.find((s) => s === data.status) ?? "PUBLISHED",
         coverPattern: data.coverPattern || "orbit",
         coverTones: data.coverTones || JSON.stringify(["primary", "accent-secondary"]),
         coverIcon: data.coverIcon || "sparkles",
         imageUrl: data.imageUrl?.trim() || null,
         imageAlt: data.imageAlt?.trim() || null,
-        publishedAt: new Date(),
+        publishedAt: publishedAt.value ?? new Date(),
+        ...extras.value,
         translations: data.hi?.title?.trim()
           ? { create: { locale: "hi", ...translationData(data.hi) } }
           : undefined,
@@ -111,32 +205,9 @@ export async function createArticle(data: {
   }
 }
 
-export async function updateArticle(
-  id: string,
-  data: {
-    title: string;
-    slug: string;
-    topicSlug: string;
-    authorId?: string;
-    description?: string;
-    content?: string;
-    readTime?: number;
-    featured?: boolean;
-    editorsPick?: boolean;
-    trending?: boolean;
-    status?: ArticleStatus;
-    coverPattern?: string;
-    coverTones?: string;
-    coverIcon?: string;
-    imageUrl?: string;
-    imageAlt?: string;
-    hi?: TranslationInput;
-    /** SEO overrides per language ({ en, hi }); empty fields mean automatic. */
-    seo?: unknown;
-  }
-): Promise<ArticleMutationResult> {
+export async function updateArticle(id: string, data: ArticleInput): Promise<ArticleMutationResult> {
   try {
-    const staff = await requireStaff();
+    await requireStaff();
 
     const seo = cleanLocalizedSeo(data.seo);
     if (!seo.ok) return { success: false, error: seo.error };
@@ -148,7 +219,10 @@ export async function updateArticle(
       return { success: false, error: "Title, slug, and topic are required." };
     }
 
-    const existing = await prisma.article.findUnique({ where: { id } });
+    const existing = await prisma.article.findUnique({
+      where: { id },
+      include: { translations: { where: { locale: "hi" } } },
+    });
     if (!existing) {
       return { success: false, error: "Article not found." };
     }
@@ -161,9 +235,29 @@ export async function updateArticle(
       }
     }
 
+    const publishedAt = parsePublishDate(data.publishedAt);
+    if (!publishedAt.ok) return { success: false, error: publishedAt.error };
+    const extras = await extrasData(data, slug);
+    if (!extras.ok) return { success: false, error: extras.error };
+
     const author = data.authorId
       ? await prisma.user.findUnique({ where: { id: data.authorId } })
       : null;
+
+    const description = data.description?.trim() || null;
+    const content = data.content?.trim() || null;
+    const hi = data.hi?.title?.trim() ? translationData(data.hi) : null;
+    const oldHi = existing.translations[0];
+
+    // "Updated" date: only when the text readers see changed on an article that was already live.
+    const wasLive = existing.status === "PUBLISHED" && existing.publishedAt.getTime() <= Date.now();
+    const textChanged =
+      title !== existing.title ||
+      description !== existing.description ||
+      content !== existing.content ||
+      extras.value.takeaways !== existing.takeaways ||
+      extras.value.faq !== existing.faq ||
+      (hi ? hi.title !== oldHi?.title || hi.content !== oldHi?.content || hi.description !== oldHi?.description : false);
 
     await prisma.article.update({
       where: { id },
@@ -173,33 +267,42 @@ export async function updateArticle(
         topicSlug: data.topicSlug,
         authorId: author ? author.id : existing.authorId,
         authorName: author ? author.name : existing.authorName,
-        description: data.description?.trim() || null,
-        content: data.content?.trim() || null,
+        description,
+        content,
         readTime: Number(data.readTime) || existing.readTime,
         featured: data.featured !== undefined ? data.featured : existing.featured,
         editorsPick: data.editorsPick !== undefined ? data.editorsPick : existing.editorsPick,
         trending: data.trending !== undefined ? data.trending : existing.trending,
-        status: data.status || existing.status,
+        status: STATUSES.find((s) => s === data.status) ?? existing.status,
+        publishedAt: publishedAt.value ?? existing.publishedAt,
+        contentUpdatedAt: wasLive && textChanged ? new Date() : existing.contentUpdatedAt,
         coverPattern: data.coverPattern || existing.coverPattern,
         coverTones: data.coverTones || existing.coverTones,
         coverIcon: data.coverIcon || existing.coverIcon,
         imageUrl: data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : existing.imageUrl,
         imageAlt: data.imageAlt !== undefined ? (data.imageAlt?.trim() || null) : existing.imageAlt,
+        ...extras.value,
         // Hindi version: saved with the article, or removed when its title is cleared.
         translations: !data.hi
           ? undefined
-          : data.hi.title?.trim()
+          : hi
             ? {
                 upsert: {
                   where: { articleId_locale: { articleId: id, locale: "hi" } },
-                  update: translationData(data.hi),
-                  create: { locale: "hi", ...translationData(data.hi) },
+                  update: hi,
+                  create: { locale: "hi", ...hi },
                 },
               }
             : { deleteMany: { locale: "hi" } },
         seo: seoUpdate(seo.value, { articleId: id }),
       },
     });
+
+    // A new slug keeps the old address working (301), and supporting articles follow their pillar.
+    if (slug !== existing.slug) {
+      await recordMove(`/articles/${existing.slug}`, `/articles/${slug}`, `Slug changed: ${title}`);
+      await prisma.article.updateMany({ where: { pillarSlug: existing.slug }, data: { pillarSlug: slug } });
+    }
 
     revalidatePath("/", "layout"); // Every public page in every language; header menus show articles too.
     revalidatePath("/admin/articles");
@@ -234,6 +337,7 @@ export async function toggleArticleStatus(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await requireStaff();
+    if (!STATUSES.includes(newStatus)) return { success: false, error: "Unknown status." };
 
     await prisma.article.update({
       where: { id },
@@ -311,6 +415,15 @@ export async function duplicateArticle(id: string): Promise<ArticleMutationResul
         coverPattern: original.coverPattern,
         coverTones: original.coverTones,
         coverIcon: original.coverIcon,
+        focusKeyword: original.focusKeyword,
+        takeaways: original.takeaways,
+        faq: original.faq,
+        articleType: original.articleType,
+        sponsorName: original.sponsorName,
+        sponsorUrl: original.sponsorUrl,
+        pillarSlug: original.pillarSlug,
+        relatedListings: original.relatedListings,
+        resources: original.resources,
         publishedAt: new Date(),
       },
     });
@@ -322,4 +435,3 @@ export async function duplicateArticle(id: string): Promise<ArticleMutationResul
     return { success: false, error: error instanceof Error ? error.message : "Failed to duplicate article." };
   }
 }
-

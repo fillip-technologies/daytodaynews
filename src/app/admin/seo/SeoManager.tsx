@@ -625,6 +625,20 @@ export function SeoManager({ initialSite, pages }: { initialSite: SiteSeo; pages
                 ))}
               </select>
             </div>
+            <label className="flex items-start gap-3 text-xs font-medium text-text-primary">
+              <input
+                type="checkbox"
+                checked={site.publisher.showAuthors}
+                onChange={(e) => setPublisher({ showAuthors: e.target.checked })}
+                className="mt-0.5 size-4 rounded accent-primary"
+              />
+              <span>
+                Show writers&apos; names on articles and cards
+                <span className={`${hint} block`}>
+                  Off: no bylines anywhere, and search engines are told the publication itself is the author.
+                </span>
+              </span>
+            </label>
             <SocialLinksEditor value={site.publisher.socials} onChange={(socials) => setPublisher({ socials })} />
             <div>
               <label htmlFor="seo-publisher-sameas" className={label}>Other official profiles</label>

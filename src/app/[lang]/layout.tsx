@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Script from "next/script";
 import { Analytics } from "@/components/layout/Analytics";
 import { BrandProvider } from "@/components/layout/BrandProvider";
 import { Footer } from "@/components/layout/Footer";
@@ -8,6 +9,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { I18nProvider } from "@/i18n/client";
 import { isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "@/i18n/server";
+import { getAds, usesAdsense } from "@/lib/ads";
 import { getSiteNavigation } from "@/lib/navigation";
 import { getSiteLinks } from "@/lib/settings";
 import { localizeLinks, localizeText } from "@/lib/site-links";
@@ -22,6 +24,11 @@ import "../globals.css";
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
 }
+
+// Prerendered pages are rebuilt at most every 5 minutes, so an article scheduled
+// for a future date appears on the homepage and listings shortly after its time
+// (admin saves still refresh everything at once).
+export const revalidate = 300;
 
 // Site-wide tags from Admin → SEO. Pages add their own title, description,
 // canonical and social tags through lib/seo/metadata.
@@ -47,11 +54,12 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
 
-  const [navigation, site, dictionary, links] = await Promise.all([
+  const [navigation, site, dictionary, links, ads] = await Promise.all([
     getSiteNavigation(lang),
     getSiteSeo(),
     getDictionary(lang),
     getSiteLinks(),
+    getAds(),
   ]);
   const footerLinks = {
     exploreTitle: localizeText(links.exploreTitle, lang),
@@ -96,6 +104,13 @@ export default async function SiteLayout({ children, params }: LayoutProps<"/[la
           </BrandProvider>
         </I18nProvider>
         <Analytics gaId={site.analytics.gaId} gtmId={site.analytics.gtmId} />
+        {usesAdsense(ads) && (
+          <Script
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ads.adsenseClient}`}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
       </body>
     </html>
   );

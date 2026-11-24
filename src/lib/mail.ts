@@ -184,3 +184,128 @@ export async function sendNewsletterWelcome(email: string) {
     `,
   });
 }
+
+/** Plain HTML escaping for the mail helpers below (same rules as esc). */
+export const escapeHtml = esc;
+
+const adminInbox = () => process.env.MAIL_FROM_ADDRESS || process.env.MAIL_USERNAME || "developer4.filliptechnologies@gmail.com";
+
+/** Rows of "Label: value" for lead emails; empty values are skipped. */
+function detailRows(rows: Array<[string, string | null | undefined]>) {
+  const kept = rows.filter(([, value]) => value && String(value).trim());
+  return {
+    text: kept.map(([label, value]) => `${label}: ${value}`).join("\n"),
+    html: kept.map(([label, value]) => `<p style="margin: 4px 0;"><strong>${esc(label)}:</strong> ${esc(value)}</p>`).join(""),
+  };
+}
+
+/** Admin alert for a new commercial lead (advertiser or directory enquiry). */
+export async function sendLeadNotification(lead: {
+  kind: string;
+  name: string;
+  email: string;
+  company?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  interest?: string | null;
+  budget?: string | null;
+  message: string;
+  sourcePath?: string | null;
+  listingName?: string | null;
+}) {
+  const details = detailRows([
+    ["Type", lead.kind],
+    ["Listing", lead.listingName],
+    ["Name", lead.name],
+    ["Email", lead.email],
+    ["Company", lead.company],
+    ["Phone", lead.phone],
+    ["Website", lead.website],
+    ["Interested in", lead.interest],
+    ["Budget", lead.budget],
+    ["Came from", lead.sourcePath],
+  ]);
+  return sendEmail({
+    to: adminInbox(),
+    replyTo: lead.email,
+    subject: subjectLine(`[DayTodayNews Lead] ${lead.kind}${lead.listingName ? ` for ${lead.listingName}` : ""} from ${lead.name}`),
+    text: `New lead received:\n\n${details.text}\n\nMessage:\n${lead.message}`,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b;">
+        <h2 style="color: #0f172a; margin-bottom: 8px;">New lead: ${esc(lead.kind)}</h2>
+        ${details.html}
+        <div style="background: #f8fafc; border-left: 4px solid #10b981; padding: 14px 18px; margin: 18px 0; border-radius: 4px;">
+          <p style="white-space: pre-wrap; margin: 0;">${esc(lead.message)}</p>
+        </div>
+      </div>
+    `,
+  });
+}
+
+/** Forwards a reader's enquiry to the listed company; replies go straight to the reader. */
+export async function forwardEnquiryToListing(enquiry: {
+  to: string;
+  listingName: string;
+  name: string;
+  email: string;
+  company?: string | null;
+  phone?: string | null;
+  message: string;
+}) {
+  const details = detailRows([
+    ["Name", enquiry.name],
+    ["Email", enquiry.email],
+    ["Company", enquiry.company],
+    ["Phone", enquiry.phone],
+  ]);
+  return sendEmail({
+    to: enquiry.to,
+    replyTo: enquiry.email,
+    subject: subjectLine(`New enquiry for ${enquiry.listingName} via DayTodayNews`),
+    text: `You have a new enquiry from your DayTodayNews listing.\n\n${details.text}\n\nMessage:\n${enquiry.message}\n\nReply to this email to answer ${enquiry.name} directly.`,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b;">
+        <h2 style="color: #0f172a; margin-bottom: 8px;">New enquiry for ${esc(enquiry.listingName)}</h2>
+        <p>A reader contacted you through your DayTodayNews directory listing.</p>
+        ${details.html}
+        <div style="background: #f8fafc; border-left: 4px solid #6366f1; padding: 14px 18px; margin: 18px 0; border-radius: 4px;">
+          <p style="white-space: pre-wrap; margin: 0;">${esc(enquiry.message)}</p>
+        </div>
+        <p style="font-size: 13px; color: #64748b;">Reply to this email to answer ${esc(enquiry.name)} directly.</p>
+      </div>
+    `,
+  });
+}
+
+/** Tells a company their listing arrived (and the team about the new submission). */
+export async function sendListingReceived(listing: { name: string; kind: string; email: string | null; submitterName: string | null }) {
+  await sendEmail({
+    to: adminInbox(),
+    subject: subjectLine(`[DayTodayNews Directory] New ${listing.kind.toLowerCase()} listing to review: ${listing.name}`),
+    text: `A new listing was submitted and is waiting for review in Admin → Directory.\n\nName: ${listing.name}\nType: ${listing.kind}\nContact: ${listing.submitterName ?? ""} <${listing.email ?? ""}>`,
+  });
+  if (listing.email) {
+    await sendEmail({
+      to: listing.email,
+      subject: subjectLine(`We received your listing: ${listing.name}`),
+      text: `Hi ${listing.submitterName || "there"},\n\nThanks for submitting ${listing.name} to the DayTodayNews directory. Our team reviews every listing before it goes live and will email you once it is published.\n\nBest,\nThe DayTodayNews Team`,
+    });
+  }
+}
+
+/** Tells a company their listing is live. */
+export async function sendListingApproved(listing: { name: string; email: string; url: string }) {
+  return sendEmail({
+    to: listing.email,
+    subject: subjectLine(`Your listing is live: ${listing.name}`),
+    text: `Good news: ${listing.name} is now listed on DayTodayNews.\n\nView it here: ${listing.url}\n\nReader enquiries will be sent to this email address.\n\nBest,\nThe DayTodayNews Team`,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; color: #1e293b;">
+        <h2 style="color: #0f172a;">Your listing is live</h2>
+        <p><strong>${esc(listing.name)}</strong> is now listed on DayTodayNews.</p>
+        <p><a href="${esc(listing.url)}">View your listing</a></p>
+        <p style="font-size: 13px; color: #64748b;">Reader enquiries will be sent to this email address.</p>
+      </div>
+    `,
+  });
+}

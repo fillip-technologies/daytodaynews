@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/Icon";
 import { useI18n } from "@/i18n/client";
 import { format } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { HONEYPOT_FIELD, trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 
 export type FormFieldConfig = {
@@ -29,10 +30,15 @@ type UiFormProps = {
   fields: FormFieldConfig[];
   submitLabel: string;
   note?: string;
-  /** Wire to an API later; without it the form only confirms locally. */
+  /**
+   * Sends the form. Throwing shows the error's message (or a generic one) and
+   * keeps what the reader typed. `values._hp` carries the honeypot field.
+   */
   onSubmit?: (values: FormValues) => Promise<void>;
   successTitle?: string;
   successMessage?: string;
+  /** GA4 lead event sent after a successful submission, e.g. { form: "contact" }. */
+  leadEvent?: Record<string, string>;
 };
 
 function validate(field: FormFieldConfig, value: string, t: Dictionary["forms"]): string | null {
@@ -66,15 +72,22 @@ export function UiForm({
   onSubmit,
   successTitle = "Thank you!",
   successMessage = "Online submissions are opening soon, so this message wasn't sent yet.",
+  leadEvent,
 }: UiFormProps) {
   const t = useI18n().t.forms;
   const formId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "done">("idle");
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const valuesOf = (form: HTMLFormElement): FormValues =>
-    Object.fromEntries(fields.map((field) => [field.name, String(new FormData(form).get(field.name) ?? "")]));
+  const valuesOf = (form: HTMLFormElement): FormValues => {
+    const data = new FormData(form);
+    return {
+      ...Object.fromEntries(fields.map((field) => [field.name, String(data.get(field.name) ?? "")])),
+      _hp: String(data.get(HONEYPOT_FIELD) ?? ""),
+    };
+  };
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,7 +105,15 @@ export function UiForm({
       return;
     }
     setStatus("submitting");
-    await onSubmit?.(values);
+    setSubmitError(null);
+    try {
+      await onSubmit?.(values);
+    } catch (error) {
+      setSubmitError(error instanceof Error && error.message ? error.message : t.sendFailed);
+      setStatus("idle");
+      return;
+    }
+    if (leadEvent) trackEvent("generate_lead", leadEvent);
     setStatus("done");
   }
 
@@ -202,6 +223,20 @@ export function UiForm({
           </div>
         );
       })}
+
+      {/* Honeypot: hidden from people and screen readers; bots that fill it are ignored. */}
+      <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+        <label>
+          Leave this empty
+          <input type="text" name={HONEYPOT_FIELD} tabIndex={-1} autoComplete="off" defaultValue="" />
+        </label>
+      </div>
+
+      {submitError && (
+        <p role="alert" className="rounded-xl border border-error/30 bg-error/10 p-3.5 text-sm text-error sm:col-span-2">
+          {submitError}
+        </p>
+      )}
 
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
         {note && <p className="text-sm text-text-muted">{note}</p>}

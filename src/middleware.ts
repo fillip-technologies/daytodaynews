@@ -5,8 +5,32 @@ import { getJwtSecret } from "@/lib/session-secret";
 
 const SESSION_COOKIE_NAME = "admin_session";
 
+/**
+ * One public domain. With CANONICAL_HOST set on the server (e.g.
+ * "daytodaynews.com"), requests for any other host name, such as a staging
+ * domain serving the same app, are sent there permanently, so search engines
+ * never index two copies of the site. Local addresses are left alone.
+ */
+function canonicalHostRedirect(request: NextRequest): NextResponse | null {
+  const canonicalHost = process.env.CANONICAL_HOST?.trim().toLowerCase();
+  if (!canonicalHost) return null;
+  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  const hostname = host.split(":")[0];
+  if (!host || host === canonicalHost || hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]") {
+    return null;
+  }
+  const url = new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, `https://${canonicalHost}`);
+  return NextResponse.redirect(url, 301);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const hostRedirect = canonicalHostRedirect(request);
+  if (hostRedirect) return hostRedirect;
 
   if (pathname.startsWith("/admin")) {
     return guardAdmin(request);

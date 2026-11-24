@@ -3,6 +3,7 @@ import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
 import { sectionContainer } from "@/components/home/SectionHeader";
 import { FixedPageJsonLd } from "@/components/seo/FixedPageJsonLd";
 import { ContributorForm } from "@/components/static/ContributorForm";
+import { PageMarkdown } from "@/components/static/PageMarkdown";
 import { StaticPageHero } from "@/components/static/StaticPageHero";
 import { StaticSection } from "@/components/static/StaticSection";
 import { TopicGrid, type TopicGridItem } from "@/components/static/TopicGrid";
@@ -73,6 +74,52 @@ export default async function WriteForUsPage() {
           ))}
         </ul>
       </StaticSection>
+
+      <StaticSection id="process-title" title={c.text("processTitle")}>
+        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {c.items("processSteps").map((step, i) => (
+            <li key={i} className="relative rounded-2xl border border-border bg-surface-elevated p-5">
+              <span className="grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-surface-elevated">
+                {i + 1}
+              </span>
+              <h3 className="mt-3 font-semibold text-text-primary">{step.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </StaticSection>
+
+      <div className={`${sectionContainer} py-10 sm:py-14`}>
+        <div className="grid gap-5 lg:grid-cols-2">
+          {[
+            { id: "length-title", title: c.text("lengthTitle"), body: c.text("lengthBody") },
+            { id: "review-title", title: c.text("reviewTitle"), body: c.text("reviewBody") },
+            { id: "sponsored-title", title: c.text("sponsoredTitle"), body: c.text("sponsoredBody") },
+          ].map((block) => (
+            <section key={block.id} aria-labelledby={block.id} className="rounded-2xl border border-border bg-surface-elevated p-6">
+              <h2 id={block.id} className="text-xl font-semibold tracking-[-0.01em] text-text-primary">
+                {block.title}
+              </h2>
+              <div className="mt-3 space-y-3 text-sm leading-relaxed text-text-secondary [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_strong]:text-text-primary">
+                <PageMarkdown>{block.body}</PageMarkdown>
+              </div>
+            </section>
+          ))}
+          <section aria-labelledby="author-title" className="rounded-2xl border border-border bg-surface-elevated p-6">
+            <h2 id="author-title" className="text-xl font-semibold tracking-[-0.01em] text-text-primary">
+              {c.text("authorTitle")}
+            </h2>
+            <ul className="mt-3 space-y-2.5">
+              {c.list("authorList").map((item, index) => (
+                <li key={index} className="flex gap-2.5 text-sm leading-relaxed text-text-secondary">
+                  <Icon name="check" className="mt-0.5 size-4 shrink-0 text-success" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      </div>
 
       <div className={`${sectionContainer} pt-10 pb-20 sm:pt-14 sm:pb-24`}>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-14">

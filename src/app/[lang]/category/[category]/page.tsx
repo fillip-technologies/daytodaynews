@@ -18,13 +18,28 @@ import { absoluteUrl, breadcrumbList, collectionNode, graph } from "@/lib/seo/st
 import type { CleanSeo } from "@/lib/seo/validate";
 import { toneStyle, type Tone } from "@/lib/tones";
 import { prisma } from "@/lib/prisma";
+import { AdSlot } from "@/components/ads/AdSlot";
+import { CtaBox } from "@/components/article/ArticleExtras";
+import { PageMarkdown } from "@/components/static/PageMarkdown";
+import { Icon } from "@/components/ui/Icon";
+import Link from "@/i18n/Link";
+import { getLiveArticlesBySlugs } from "@/lib/articles";
+import { categoryCta } from "@/lib/category-cta";
+import { liveArticleWhere } from "@/lib/visibility";
 
 type Props = PageProps<"/[lang]/category/[category]">;
 
 const pageHref = (slug: string, page: number) =>
   page > 1 ? `/category/${slug}?page=${page}` : `/category/${slug}`;
 
-type ResolvedCategory = Category & { tone?: Tone; seo: CleanSeo | null };
+type ResolvedCategory = Category & {
+  tone?: Tone;
+  seo: CleanSeo | null;
+  /** Longer introduction (markdown) and pillar guide, from Admin → Categories. */
+  intro?: string | null;
+  pillarSlug?: string | null;
+  cta?: { ctaTitle?: string | null; ctaText?: string | null; ctaLabel?: string | null; ctaHref?: string | null };
+};
 
 // Memoized per request: the page and its metadata both need the category.
 const resolveCategory = cache(async (slug: string, locale: Locale): Promise<ResolvedCategory | null> => {
@@ -53,6 +68,14 @@ const resolveCategory = cache(async (slug: string, locale: Locale): Promise<Reso
         seoTitle: format(t.category.seoTitle, { category: name }),
         seoDescription: description,
         seo: dbTopic.seo[0] ?? null,
+        intro: translation?.intro || dbTopic.intro,
+        pillarSlug: dbTopic.pillarSlug,
+        cta: {
+          ctaTitle: translation?.ctaTitle || dbTopic.ctaTitle,
+          ctaText: translation?.ctaText || dbTopic.ctaText,
+          ctaLabel: translation?.ctaLabel || dbTopic.ctaLabel,
+          ctaHref: dbTopic.ctaHref,
+        },
       };
     }
   } catch (err) {
@@ -75,7 +98,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!category) return {};
   // An empty category page stays out of search results until its first article.
   const published = await prisma.article
-    .count({ where: { topicSlug: category.topic, status: "PUBLISHED" } })
+    .count({ where: { topicSlug: category.topic, ...liveArticleWhere() } })
     .catch(() => 1);
   return buildMetadata({
     locale,
@@ -97,12 +120,16 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   }
 
   const requestedPage = parsePage((await searchParams).page);
-  const [listing, popular, site, t] = await Promise.all([
+  const [listing, popular, site, t, pillars] = await Promise.all([
     getCategoryListing(category.topic, requestedPage, locale),
     getPopularInCategory(category.topic, 5, locale),
     getSiteSeo(),
     getDictionary(locale),
+    category.pillarSlug ? getLiveArticlesBySlugs([category.pillarSlug], locale) : Promise.resolve([]),
   ]);
+  const pillar = pillars[0] ?? null;
+  const isFirstPage = listing.page === 1;
+  const cta = categoryCta({ slug: category.topic, ...category.cta }, locale);
   const tone = category.tone || (getTopic(category.topic)?.tone ?? "primary");
 
   const pageUrl = absoluteUrl(site, canonicalPath(pageHref(category.slug, requestedPage), locale, true, category.seo));
@@ -130,6 +157,29 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             latestDate={listing.latestDate}
           />
 
+          {isFirstPage && category.intro && (
+            <div className="mt-8 max-w-3xl space-y-4 text-base leading-relaxed text-text-secondary [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_strong]:text-text-primary [&_ul]:list-disc [&_ul]:pl-6">
+              <PageMarkdown>{category.intro}</PageMarkdown>
+            </div>
+          )}
+
+          {isFirstPage && pillar && (
+            <Link
+              href={pillar.href}
+              className="group mt-8 flex items-center justify-between gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-5 transition-colors hover:bg-primary/10"
+            >
+              <span className="min-w-0">
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                  {t.category.startHere} · {t.category.completeGuide}
+                </span>
+                <span lang={pillar.locale} className="mt-1 block text-lg font-semibold text-text-primary">
+                  {pillar.title}
+                </span>
+              </span>
+              <Icon name="arrowRight" className="size-5 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          )}
+
           {listing.featured && listing.page === 1 && (
             <section aria-label={t.common.featuredArticle} className="mt-10 sm:mt-12">
               <FeaturedArticle article={listing.featured} />
@@ -144,6 +194,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             pageCount={listing.pageCount}
             hrefForPage={(page) => pageHref(category.slug, page)}
           />
+
+          <div className="mx-auto max-w-4xl">
+            <CtaBox cta={cta} />
+            <AdSlot placement="category" locale={locale} />
+          </div>
         </div>
       </div>
 

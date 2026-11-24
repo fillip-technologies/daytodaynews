@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "@/i18n/Link";
-import { notFound } from "next/navigation";
+import { AdSlot } from "@/components/ads/AdSlot";
+import {
+  CtaBox,
+  Disclosure,
+  Downloads,
+  FaqSection,
+  KeyTakeaways,
+  RelatedListings,
+  SeriesBlock,
+} from "@/components/article/ArticleExtras";
 import { CoverArt } from "@/components/blog/CoverArt";
 import { ArticleContent } from "@/components/article/ArticleContent";
 import { Newsletter } from "@/components/home/Newsletter";
@@ -9,13 +18,17 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { Icon } from "@/components/ui/Icon";
 import { defaultLocale, format, isLocale, localizePath, locales, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/server";
-import { getArticleBySlug, getPopularInCategory } from "@/lib/articles";
+import { getArticleBySlug, getPillarSeries, getPopularInCategory } from "@/lib/articles";
 import { getCurrentUser } from "@/lib/auth";
+import { categoryCta } from "@/lib/category-cta";
+import { getListingsBySlugs } from "@/lib/directory";
 import { formatDate } from "@/lib/format";
+import { redirectOrNotFound } from "@/lib/redirects";
 import { buildMetadata, canonicalPath, splitKeywords } from "@/lib/seo/metadata";
 import { getSiteSeo } from "@/lib/seo/site";
-import { absoluteUrl, articleNode, breadcrumbList, graph } from "@/lib/seo/structured-data";
+import { absoluteUrl, articleNode, breadcrumbList, faqPageNode, graph } from "@/lib/seo/structured-data";
 import { toneStyle, type Tone } from "@/lib/tones";
+import { isLiveArticle, isScheduledArticle, meaningfulUpdate, modifiedDate } from "@/lib/visibility";
 import type { CoverPattern, CoverSpec } from "@/types/article";
 
 type Props = PageProps<"/[lang]/articles/[slug]">;
@@ -28,15 +41,15 @@ async function readParams(params: Props["params"]) {
 /** Until every language exists, all copies point at the English original. */
 const isFullyTranslated = (translatedLocales: Locale[]) => locales.every((l) => translatedLocales.includes(l));
 
-/** Published articles are public; drafts and archived ones only for signed-in staff (preview). */
-async function canViewArticle(status: string) {
-  return status === "PUBLISHED" || Boolean(await getCurrentUser());
+/** Live articles are public; drafts, articles in review, scheduled and archived ones only for signed-in staff (preview). */
+async function canViewArticle(article: { status: string; publishedAt: Date }) {
+  return isLiveArticle(article) || Boolean(await getCurrentUser());
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await readParams(params);
   const [article, site, t] = await Promise.all([getArticleBySlug(slug, locale), getSiteSeo(), getDictionary(locale)]);
-  if (!article || !(await canViewArticle(article.status))) {
+  if (!article || !(await canViewArticle(article))) {
     return { title: t.article.notFoundTitle, robots: { index: false, follow: false } };
   }
 
@@ -50,14 +63,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: article.title,
       description: article.description || format(t.article.readAbout, { title: article.title }),
       image: article.imageUrl,
-      // Staff previews of drafts must never be indexed.
-      noIndex: article.status !== "PUBLISHED",
+      // Staff previews (drafts, scheduled, in review) must never be indexed.
+      noIndex: !isLiveArticle(article),
     },
     type: "article",
     article: {
       publishedTime: article.publishedAt.toISOString(),
-      modifiedTime: article.updatedAt.toISOString(),
-      authors: [article.author?.name || article.authorName],
+      modifiedTime: modifiedDate(article).toISOString(),
+      authors: article.showAuthors ? [article.author?.name || article.authorName] : [site.siteName[locale]],
       section: article.topic.label,
     },
   });
@@ -67,13 +80,18 @@ export default async function ArticlePage({ params }: Props) {
   const { slug, locale } = await readParams(params);
   const [article, site, t] = await Promise.all([getArticleBySlug(slug, locale), getSiteSeo(), getDictionary(locale)]);
 
-  if (!article || !(await canViewArticle(article.status))) {
-    notFound();
+  if (!article || !(await canViewArticle(article))) {
+    // A renamed or merged article: follow its redirect from Admin → Redirects.
+    return redirectOrNotFound(`/articles/${slug}`, locale);
   }
-  const isDraft = article.status !== "PUBLISHED";
+  const isLive = isLiveArticle(article);
+  const isScheduled = isScheduledArticle(article);
+  const updatedOn = meaningfulUpdate(article);
+  const textLangLocale = article.contentLocale;
 
   const path = `/articles/${slug}`;
   const pageUrl = absoluteUrl(site, canonicalPath(path, locale, isFullyTranslated(article.translatedLocales), article.seo));
+  const authorName = article.showAuthors ? article.author?.name || article.authorName : null;
   const structuredData = graph(
     articleNode(site, locale, {
       url: pageUrl,
@@ -81,23 +99,30 @@ export default async function ArticlePage({ params }: Props) {
       description: article.description,
       image: article.seo?.ogImage || article.imageUrl,
       publishedAt: article.publishedAt,
-      updatedAt: article.updatedAt,
-      authorName: article.author?.name || article.authorName,
+      modifiedAt: modifiedDate(article),
+      authorName,
       section: article.topic.label,
-      keywords: splitKeywords(article.seo?.keywords),
-      textLocale: article.contentLocale,
+      keywords: splitKeywords([article.focusKeyword, article.seo?.keywords].filter(Boolean).join(", ")),
+      textLocale: textLangLocale,
     }),
     breadcrumbList([
       { name: t.common.home, url: absoluteUrl(site, localizePath("/", locale)) },
       { name: article.topic.label, url: absoluteUrl(site, localizePath(`/category/${article.topicSlug}`, locale)) },
       { name: article.title, url: pageUrl },
     ]),
+    ...(article.faq.length ? [faqPageNode(pageUrl, article.faq)] : []),
   );
 
-  const related = await getPopularInCategory(article.topicSlug, 3, locale);
+  const [related, series, listings] = await Promise.all([
+    getPopularInCategory(article.topicSlug, 3, locale),
+    getPillarSeries(article, locale),
+    getListingsBySlugs(article.relatedListings),
+  ]);
   const otherArticles = related.filter((r) => r.slug !== slug).slice(0, 2);
   // The page is in `locale`, but the story itself may still be English only.
   const textLang = article.contentLocale !== locale ? article.contentLocale : undefined;
+  const cta = categoryCta(article.topic, locale);
+  const isSponsored = article.articleType === "SPONSORED";
 
   let coverSpec: CoverSpec | undefined;
   if (article.coverPattern && article.coverTones) {
@@ -116,7 +141,7 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <main className="flex-1">
-      {!isDraft && <JsonLd data={structuredData} />}
+      {isLive && <JsonLd data={structuredData} />}
       {/* Atmosphere background */}
       <div className="relative isolate">
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem] overflow-hidden">
@@ -151,13 +176,15 @@ export default async function ArticlePage({ params }: Props) {
 
           {/* Article Header */}
           <header className="mx-auto max-w-[44rem] space-y-6">
-            {isDraft && (
+            {!isLive && (
               <p
                 role="status"
                 className="flex items-center gap-2.5 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm font-medium text-warning"
               >
                 <Icon name="eye" className="size-4 shrink-0" />
-                {t.common.draftPreview}
+                {isScheduled
+                  ? format(t.common.scheduledPreview, { date: formatDate(article.publishedAt.toISOString(), locale) })
+                  : t.common.draftPreview}
               </p>
             )}
             {textLang && (
@@ -178,6 +205,16 @@ export default async function ArticlePage({ params }: Props) {
                 <Icon name={article.topic.icon as any} className="size-3.5" />
                 {article.topic.label}
               </span>
+              {isSponsored && (
+                <span className="rounded-full bg-warning/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-warning">
+                  {t.common.sponsored}
+                </span>
+              )}
+              {article.articleType === "GUEST" && (
+                <span className="rounded-full bg-accent-secondary/15 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-accent-secondary">
+                  {t.common.guest}
+                </span>
+              )}
               <span className="text-xs text-text-muted">•</span>
               <span className="text-xs font-medium text-text-secondary">
                 {format(t.common.minRead, { n: article.readTime })}
@@ -189,6 +226,16 @@ export default async function ArticlePage({ params }: Props) {
               >
                 {formatDate(article.publishedAt.toISOString(), locale)}
               </time>
+              {updatedOn && (
+                <>
+                  <span className="text-xs text-text-muted">•</span>
+                  <span className="text-xs font-medium text-text-secondary">
+                    <time dateTime={updatedOn.toISOString()}>
+                      {format(t.common.updated, { date: formatDate(updatedOn.toISOString(), locale) })}
+                    </time>
+                  </span>
+                </>
+              )}
             </div>
 
             <h1 lang={textLang} className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl lg:text-5xl lg:leading-[1.15]">
@@ -201,20 +248,29 @@ export default async function ArticlePage({ params }: Props) {
               </p>
             )}
 
-            {/* Author bar */}
-            <div className="flex items-center gap-4 border-y border-border py-4">
-              <div className="grid size-11 place-items-center rounded-full bg-surface-elevated font-semibold text-text-primary shadow-xs ring-1 ring-border">
-                {article.author?.name ? article.author.name[0] : "S"}
+            {(isSponsored || article.articleType === "GUEST") && (
+              <Disclosure
+                kind={isSponsored ? "SPONSORED" : "GUEST"}
+                sponsorName={article.sponsorName}
+                sponsorUrl={article.sponsorUrl}
+                t={t}
+              />
+            )}
+
+            {/* Author bar: only while writers' names are switched on (Admin → SEO → Brand & Credits). */}
+            {authorName ? (
+              <div className="flex items-center gap-4 border-y border-border py-4">
+                <div className="grid size-11 place-items-center rounded-full bg-surface-elevated font-semibold text-text-primary shadow-xs ring-1 ring-border">
+                  {authorName[0]}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">{authorName}</p>
+                  <p className="text-xs text-text-muted">{article.author?.bio || t.article.staffWriter}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-text-primary">
-                  {article.author?.name || article.authorName}
-                </p>
-                <p className="text-xs text-text-muted">
-                  {article.author?.bio || t.article.staffWriter}
-                </p>
-              </div>
-            </div>
+            ) : (
+              <div className="border-t border-border" />
+            )}
           </header>
 
           {/* Article Visual / Cover */}
@@ -239,11 +295,25 @@ export default async function ArticlePage({ params }: Props) {
 
           {/* Article Body */}
           <div lang={textLang} className="mx-auto mt-8 max-w-[44rem]">
+            <KeyTakeaways items={article.takeaways} t={t} lang={textLang} />
             {article.content ? (
-              <ArticleContent content={article.content} />
+              <ArticleContent content={article.content} sponsored={isSponsored} />
             ) : (
               <p className="text-base text-text-muted">{t.article.comingSoon}</p>
             )}
+
+            <FaqSection items={article.faq} t={t} lang={textLang} />
+            <Downloads items={article.resources} t={t} />
+            <RelatedListings listings={listings} t={t} from={path} />
+            <SeriesBlock pillar={series.pillar} members={series.members} isPillar={article.isPillar} t={t} />
+            {!isSponsored && <CtaBox cta={cta} />}
+            <AdSlot placement="article" locale={locale} />
+
+            <p className="mt-10 text-sm text-text-muted">
+              <Link href="/editorial-policy" className="underline underline-offset-4 hover:text-text-primary">
+                {t.article.editorialStandards}
+              </Link>
+            </p>
           </div>
 
           {/* Related Articles Section */}

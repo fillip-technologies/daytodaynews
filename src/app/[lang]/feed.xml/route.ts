@@ -31,7 +31,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/[lang]/f
       <link>${url}</link>
       <guid isPermaLink="true">${url}</guid>
       <pubDate>${new Date(article.date).toUTCString()}</pubDate>
-      <dc:creator>${escapeXml(article.author)}</dc:creator>
+      <dc:creator>${escapeXml(article.author || site.siteName[lang])}</dc:creator>
       <category>${escapeXml(article.category)}</category>${
         article.description ? `\n      <description>${escapeXml(article.description)}</description>` : ""
       }

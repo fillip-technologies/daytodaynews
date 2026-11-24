@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/format";
 import { useAdminDataTable } from "@/hooks/useAdminDataTable";
 import { DataTablePagination } from "@/components/admin/DataTablePagination";
 import type { ArticleStatus } from "@/generated/prisma";
+import { SCHEDULING_ENABLED } from "@/lib/visibility";
 
 type ArticleItem = {
   id: string;
@@ -45,10 +46,13 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
   const [selectedTopic, setSelectedTopic] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<"ALL" | ArticleStatus>("ALL");
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Read once: a published article dated after this moment is shown as Scheduled.
+  const [now] = useState(() => Date.now());
 
   const statusCounts = {
     ALL: articles.length,
     PUBLISHED: articles.filter((a) => a.status === "PUBLISHED").length,
+    IN_REVIEW: articles.filter((a) => a.status === "IN_REVIEW").length,
     DRAFT: articles.filter((a) => a.status === "DRAFT").length,
     ARCHIVED: articles.filter((a) => a.status === "ARCHIVED").length,
   };
@@ -165,7 +169,7 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
       <div className="flex flex-col gap-3">
         {/* Status tabs */}
         <div className="flex flex-wrap items-center gap-2">
-          {(["ALL", "PUBLISHED", "DRAFT", "ARCHIVED"] as const).map((st) => (
+          {(["ALL", "PUBLISHED", "IN_REVIEW", "DRAFT", "ARCHIVED"] as const).map((st) => (
             <button
               key={st}
               onClick={() => setSelectedStatus(st)}
@@ -175,7 +179,7 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
                   : "border border-border bg-surface-elevated text-text-secondary hover:text-text-primary"
               }`}
             >
-              {st === "ALL" ? "All Stories" : st.charAt(0) + st.slice(1).toLowerCase()} ({statusCounts[st]})
+              {st === "ALL" ? "All Stories" : st === "IN_REVIEW" ? "In review" : st.charAt(0) + st.slice(1).toLowerCase()} ({statusCounts[st]})
             </button>
           ))}
         </div>
@@ -333,7 +337,11 @@ export function ArticlesList({ initialArticles, topics }: ArticlesListProps) {
                             a.status === "PUBLISHED" ? "bg-success" : "bg-warning"
                           }`}
                         />
-                        {a.status}
+                        {SCHEDULING_ENABLED && a.status === "PUBLISHED" && new Date(a.publishedAt).getTime() > now
+                          ? "Scheduled"
+                          : a.status === "IN_REVIEW"
+                            ? "In review"
+                            : a.status}
                       </button>
                     </td>
 

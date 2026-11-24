@@ -24,7 +24,10 @@ export type Article = {
   category: string;
   categoryHref: string;
   categoryTone: CategoryTone;
+  /** Byline; empty when author names are switched off (Admin → SEO → Brand & Credits). */
   author: string;
+  /** Guest contribution or paid placement; such cards carry a label. */
+  kind?: "guest" | "sponsored";
   /** ISO date, e.g. "2026-12-12". */
   date: string;
   /** Minutes. */

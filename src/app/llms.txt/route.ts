@@ -1,6 +1,7 @@
 import { localizePath } from "@/i18n/config";
 import { getLatestArticles, getTopics } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
+import { liveArticleWhere } from "@/lib/visibility";
 import { getSiteSeo } from "@/lib/seo/site";
 import { absoluteUrl, siteDeveloper } from "@/lib/seo/structured-data";
 
@@ -20,7 +21,7 @@ export async function GET() {
     getTopics("en"),
     getLatestArticles(25, "en"),
     prisma.article
-      .findMany({ where: { status: "PUBLISHED" }, select: { topicSlug: true }, distinct: ["topicSlug"] })
+      .findMany({ where: liveArticleWhere(), select: { topicSlug: true }, distinct: ["topicSlug"] })
       .then((rows) => new Set(rows.map((row) => row.topicSlug)))
       .catch(() => null),
   ]);

@@ -9,8 +9,22 @@ import { ArticleContent } from "@/components/article/ArticleContent";
 import { SeoFields } from "@/components/admin/SeoFields";
 import type { Locale } from "@/i18n/config";
 import { emptySeoFields, type SeoFieldsValue } from "@/lib/seo/validate";
+import type { FaqItem, ResourceLink } from "@/lib/article-extras";
 import { CoverImageUploader } from "./CoverImageUploader";
+import {
+  ArticleTypeCard,
+  ClusterCard,
+  DownloadsCard,
+  FrameworkFields,
+  ListingsCard,
+  PublishDateField,
+  SeoChecklist,
+  toLocalInput,
+} from "./EditorialPanels";
 import type { ArticleStatus } from "@/generated/prisma";
+
+/** Editorial-framework extras of one language. */
+type FrameworkText = { focusKeyword: string; takeaways: string; faq: FaqItem[] };
 
 type ArticleData = {
   id?: string;
@@ -30,11 +44,24 @@ type ArticleData = {
   coverIcon?: string | null;
   imageUrl?: string | null;
   imageAlt?: string | null;
+  /** ISO date-time. */
+  publishedAt?: string | null;
+  articleType?: string;
+  sponsorName?: string | null;
+  sponsorUrl?: string | null;
+  isPillar?: boolean;
+  pillarSlug?: string | null;
+  relatedListings?: string[];
+  resources?: ResourceLink[];
+  /** Focus keyword, takeaways and FAQs per language. */
+  framework?: Record<Locale, FrameworkText>;
   /** Hindi version; empty title means the article has none. */
   hi?: { title: string; description?: string | null; content?: string | null } | null;
   /** SEO overrides per language. */
   seo?: Record<Locale, SeoFieldsValue>;
 };
+
+const emptyFramework: FrameworkText = { focusKeyword: "", takeaways: "", faq: [] };
 
 type EditorLanguage = "en" | "hi";
 
@@ -47,11 +74,15 @@ type ArticleFormProps = {
   initialData?: ArticleData;
   topics: Option[];
   authors: Option[];
+  /** Pillar guides a supporting article can belong to (slug → title). */
+  pillars: Option[];
+  /** Approved directory listings (slug → name). */
+  listings: Option[];
   /** Site URL and title formats, for the SEO previews. */
   seoContext: { siteUrl: string; titleTemplate: Record<Locale, string> };
 };
 
-export function ArticleForm({ initialData, topics, authors, seoContext }: ArticleFormProps) {
+export function ArticleForm({ initialData, topics, authors, pillars, listings, seoContext }: ArticleFormProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEditing = Boolean(initialData?.id);
@@ -71,6 +102,17 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
   const [trending, setTrending] = useState(initialData?.trending || false);
   const [status, setStatus] = useState<ArticleStatus>(initialData?.status || "PUBLISHED");
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
+  const [publishedAt, setPublishedAt] = useState(toLocalInput(initialData?.publishedAt));
+  const [articleType, setArticleType] = useState(initialData?.articleType || "EDITORIAL");
+  const [sponsorName, setSponsorName] = useState(initialData?.sponsorName || "");
+  const [sponsorUrl, setSponsorUrl] = useState(initialData?.sponsorUrl || "");
+  const [isPillar, setIsPillar] = useState(initialData?.isPillar || false);
+  const [pillarSlug, setPillarSlug] = useState(initialData?.pillarSlug || "");
+  const [relatedListings, setRelatedListings] = useState<string[]>(initialData?.relatedListings || []);
+  const [resources, setResources] = useState<ResourceLink[]>(initialData?.resources || []);
+  const [framework, setFramework] = useState<Record<Locale, FrameworkText>>(
+    initialData?.framework ?? { en: emptyFramework, hi: emptyFramework },
+  );
 
   // Hindi version. Title, summary and content fields edit whichever language is active.
   const [language, setLanguage] = useState<EditorLanguage>("en");
@@ -238,7 +280,26 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
       coverIcon,
       imageUrl: imageUrl || undefined,
       imageAlt: imageAlt || undefined,
-      hi: { title: hiTitle, description: hiDescription, content: hiContent },
+      // The picker shows local time; the server stores the exact moment.
+      publishedAt: publishedAt ? new Date(publishedAt).toISOString() : null,
+      articleType: articleType as "EDITORIAL" | "GUEST" | "SPONSORED",
+      sponsorName,
+      sponsorUrl,
+      isPillar,
+      pillarSlug,
+      relatedListings,
+      resources,
+      focusKeyword: framework.en.focusKeyword,
+      takeaways: framework.en.takeaways,
+      faq: framework.en.faq,
+      hi: {
+        title: hiTitle,
+        description: hiDescription,
+        content: hiContent,
+        focusKeyword: framework.hi.focusKeyword,
+        takeaways: framework.hi.takeaways,
+        faq: framework.hi.faq,
+      },
       seo,
     };
 
@@ -558,6 +619,19 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
                 >
                   🔗 Link
                 </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    insertFormatting(
+                      "\n\n| Option | Best for | Cost | Notes |\n| --- | --- | --- | --- |\n| ",
+                      " |  |  |  |\n|  |  |  |  |\n\n",
+                    )
+                  }
+                  className="rounded-lg px-2 py-1 hover:bg-surface-elevated"
+                  title="Comparison table"
+                >
+                  ▦ Table
+                </button>
                 <span className="text-border">|</span>
                 <button
                   type="button"
@@ -626,6 +700,20 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
             </div>
           </div>
 
+          {/* Focus keyword, key takeaways and FAQs for the active language */}
+          <FrameworkFields
+            key={`framework-${language}`}
+            language={language}
+            focusKeyword={framework[language].focusKeyword}
+            onFocusKeyword={(focusKeyword) =>
+              setFramework((all) => ({ ...all, [language]: { ...all[language], focusKeyword } }))
+            }
+            takeaways={framework[language].takeaways}
+            onTakeaways={(takeaways) => setFramework((all) => ({ ...all, [language]: { ...all[language], takeaways } }))}
+            faq={framework[language].faq}
+            onFaq={(faq) => setFramework((all) => ({ ...all, [language]: { ...all[language], faq } }))}
+          />
+
           {/* SEO for the active language (switch at the top of the form) */}
           <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-2xs">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -674,7 +762,10 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-text-primary">Author</label>
+              <label className="block text-xs font-medium text-text-primary">Author (content owner)</label>
+              <p className="mt-0.5 text-[11px] text-text-muted">
+                Who is responsible for the article. Shown to readers only if writers&apos; names are on (Admin → SEO).
+              </p>
               <select
                 value={authorId}
                 onChange={(e) => setAuthorId(e.target.value)}
@@ -708,11 +799,59 @@ export function ArticleForm({ initialData, topics, authors, seoContext }: Articl
                 className="mt-1 h-10 w-full rounded-xl border border-border bg-background px-3 text-xs text-text-primary focus:border-primary focus:outline-none"
               >
                 <option value="PUBLISHED">Published</option>
+                <option value="IN_REVIEW">In review (fact-check before publishing)</option>
                 <option value="DRAFT">Draft</option>
                 <option value="ARCHIVED">Archived</option>
               </select>
             </div>
+
+            <PublishDateField value={publishedAt} onChange={setPublishedAt} status={status} />
           </div>
+
+          <SeoChecklist
+            title={language === "en" ? title : hiTitle || title}
+            slug={slug}
+            description={language === "en" ? description : hiDescription || description}
+            content={editorContent}
+            focusKeyword={framework[language].focusKeyword}
+            metaTitle={seo[language].metaTitle}
+            metaDescription={seo[language].metaDescription}
+            keywords={seo[language].keywords}
+            imageUrl={imageUrl}
+            imageAlt={imageAlt}
+            takeawayCount={framework[language].takeaways.split("\n").filter((l) => l.trim()).length}
+            faqCount={framework[language].faq.filter((f) => f.q.trim() && f.a.trim()).length}
+            siteHost={(() => {
+              try {
+                return new URL(seoContext.siteUrl).host;
+              } catch {
+                return "";
+              }
+            })()}
+            articleType={articleType}
+          />
+
+          <ArticleTypeCard
+            articleType={articleType}
+            onArticleType={setArticleType}
+            sponsorName={sponsorName}
+            onSponsorName={setSponsorName}
+            sponsorUrl={sponsorUrl}
+            onSponsorUrl={setSponsorUrl}
+          />
+
+          <ClusterCard
+            isPillar={isPillar}
+            onIsPillar={setIsPillar}
+            pillarSlug={pillarSlug}
+            onPillarSlug={setPillarSlug}
+            pillars={pillars}
+            currentSlug={slug}
+          />
+
+          <ListingsCard value={relatedListings} onChange={setRelatedListings} listings={listings} />
+
+          <DownloadsCard value={resources} onChange={setResources} />
 
           {/* Editorial Promotion Flags */}
           <div className="rounded-2xl border border-border bg-surface-elevated p-6 shadow-2xs space-y-3.5">

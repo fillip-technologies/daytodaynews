@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { parseFaq, parseResources, parseSlugList } from "@/lib/article-extras";
 import { getSiteSeo } from "@/lib/seo/site";
 import { toSeoFields } from "@/lib/seo/validate";
 import { ArticleForm } from "../../ArticleForm";
+import { getEditorChoices } from "../../form-data";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -15,7 +17,7 @@ export const metadata = {
 export default async function EditArticlePage({ params }: Props) {
   const { id } = await params;
 
-  const [article, topics, authors, site] = await Promise.all([
+  const [article, topics, authors, site, choices] = await Promise.all([
     prisma.article.findUnique({
       where: { id },
       include: { translations: { where: { locale: "hi" } }, seo: true },
@@ -30,11 +32,14 @@ export default async function EditArticlePage({ params }: Props) {
       select: { id: true, name: true },
     }),
     getSiteSeo(),
+    getEditorChoices(),
   ]);
 
   if (!article) {
     notFound();
   }
+
+  const hi = article.translations[0] ?? null;
 
   return (
     <ArticleForm
@@ -56,7 +61,27 @@ export default async function EditArticlePage({ params }: Props) {
         coverIcon: article.coverIcon,
         imageUrl: article.imageUrl,
         imageAlt: article.imageAlt,
-        hi: article.translations[0] ?? null,
+        publishedAt: article.publishedAt.toISOString(),
+        articleType: article.articleType,
+        sponsorName: article.sponsorName,
+        sponsorUrl: article.sponsorUrl,
+        isPillar: article.isPillar,
+        pillarSlug: article.pillarSlug,
+        relatedListings: parseSlugList(article.relatedListings),
+        resources: parseResources(article.resources),
+        framework: {
+          en: {
+            focusKeyword: article.focusKeyword ?? "",
+            takeaways: article.takeaways ?? "",
+            faq: parseFaq(article.faq),
+          },
+          hi: {
+            focusKeyword: hi?.focusKeyword ?? "",
+            takeaways: hi?.takeaways ?? "",
+            faq: parseFaq(hi?.faq),
+          },
+        },
+        hi: hi ? { title: hi.title, description: hi.description, content: hi.content } : null,
         seo: {
           en: toSeoFields(article.seo.find((s) => s.locale === "en")),
           hi: toSeoFields(article.seo.find((s) => s.locale === "hi")),
@@ -64,6 +89,8 @@ export default async function EditArticlePage({ params }: Props) {
       }}
       topics={topics.map((t) => ({ value: t.slug, label: t.label }))}
       authors={authors.map((a) => ({ value: a.id, label: a.name }))}
+      pillars={choices.pillars}
+      listings={choices.listings}
       seoContext={{ siteUrl: site.siteUrl, titleTemplate: site.titleTemplate }}
     />
   );

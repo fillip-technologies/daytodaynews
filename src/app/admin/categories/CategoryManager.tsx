@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { CategoryExtrasFields, emptyCategoryExtras, type CategoryExtras } from "./CategoryExtrasFields";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/categories";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { IconPicker } from "./IconPicker";
@@ -25,14 +26,30 @@ type CategoryItem = {
   _count: {
     articles: number;
   };
-  /** Hindi name/description, if set. */
-  translations: { label: string; description: string | null }[];
+  /** Category page introduction, pillar guide and call to action (English). */
+  intro?: string | null;
+  pillarSlug?: string | null;
+  ctaTitle?: string | null;
+  ctaText?: string | null;
+  ctaLabel?: string | null;
+  ctaHref?: string | null;
+  /** Hindi name/description (and page texts), if set. */
+  translations: {
+    label: string;
+    description: string | null;
+    intro?: string | null;
+    ctaTitle?: string | null;
+    ctaText?: string | null;
+    ctaLabel?: string | null;
+  }[];
   /** SEO overrides, one row per language. */
   seo: Array<Partial<CleanSeo> & { locale: string }>;
 };
 
 type CategoryManagerProps = {
   initialCategories: CategoryItem[];
+  /** Pillar guides (article slug → title) for "Start here". */
+  pillars: Array<{ value: string; label: string }>;
   /** Site URL and title formats, for the SEO previews. */
   seoContext: { siteUrl: string; titleTemplate: Record<Locale, string> };
 };
@@ -68,7 +85,7 @@ const AVAILABLE_TONES: { value: Tone; label: string; bgClass: string; textClass:
   },
 ];
 
-export function CategoryManager({ initialCategories, seoContext }: CategoryManagerProps) {
+export function CategoryManager({ initialCategories, pillars, seoContext }: CategoryManagerProps) {
   const [categories, setCategories] = useState<CategoryItem[]>(initialCategories);
   const [search, setSearch] = useState("");
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
@@ -88,6 +105,8 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
   const [seo, setSeo] = useState<Record<Locale, SeoFieldsValue>>({ en: emptySeoFields, hi: emptySeoFields });
   const [seoLang, setSeoLang] = useState<Locale>("en");
   const [showSeo, setShowSeo] = useState(false);
+  const [extras, setExtras] = useState<CategoryExtras>(emptyCategoryExtras);
+  const [showExtras, setShowExtras] = useState(false);
 
   function openCreateModal() {
     setSelectedCategory(null);
@@ -101,6 +120,8 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
     setSeo({ en: emptySeoFields, hi: emptySeoFields });
     setSeoLang("en");
     setShowSeo(false);
+    setExtras(emptyCategoryExtras);
+    setShowExtras(false);
     setSlugManuallyEdited(false);
     setMessage(null);
     setModalMode("create");
@@ -121,6 +142,16 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
     });
     setSeoLang("en");
     setShowSeo(cat.seo.length > 0);
+    const hiText = cat.translations[0];
+    setExtras({
+      intro: { en: cat.intro ?? "", hi: hiText?.intro ?? "" },
+      pillarSlug: cat.pillarSlug ?? "",
+      ctaTitle: { en: cat.ctaTitle ?? "", hi: hiText?.ctaTitle ?? "" },
+      ctaText: { en: cat.ctaText ?? "", hi: hiText?.ctaText ?? "" },
+      ctaLabel: { en: cat.ctaLabel ?? "", hi: hiText?.ctaLabel ?? "" },
+      ctaHref: cat.ctaHref ?? "",
+    });
+    setShowExtras(false);
     setSlugManuallyEdited(true);
     setMessage(null);
     setModalMode("edit");
@@ -158,6 +189,7 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
         tone,
         hi: { label: hiLabel, description: hiDescription },
         seo,
+        extras,
       });
 
       if (res.success) {
@@ -176,6 +208,7 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
         tone,
         hi: { label: hiLabel, description: hiDescription },
         seo,
+        extras,
       });
 
       if (res.success) {
@@ -563,6 +596,24 @@ export function CategoryManager({ initialCategories, seoContext }: CategoryManag
                   />
                 </div>
                 <p className="text-[11px] text-text-muted">Optional. Leave the Hindi name empty and /hi pages use the English name.</p>
+              </div>
+
+              {/* Category page introduction, pillar guide and call to action */}
+              <div className="rounded-xl border border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowExtras((v) => !v)}
+                  aria-expanded={showExtras}
+                  className="flex w-full items-center justify-between px-3 py-2.5 font-semibold text-text-primary"
+                >
+                  Category page &amp; call to action
+                  <Icon name="chevronDown" className={`size-4 transition-transform ${showExtras ? "rotate-180" : ""}`} />
+                </button>
+                {showExtras && (
+                  <div className="border-t border-border p-3">
+                    <CategoryExtrasFields slug={slug} value={extras} onChange={setExtras} pillars={pillars} />
+                  </div>
+                )}
               </div>
 
               {/* SEO for the category page, per language */}

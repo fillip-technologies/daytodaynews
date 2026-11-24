@@ -27,6 +27,7 @@ export function ContactForm({ subjects }: { subjects: string[] }) {
       note={t.note}
       successTitle={t.successTitle}
       successMessage={t.successMessage}
+      leadEvent={{ form: "contact" }}
     />
   );
 }

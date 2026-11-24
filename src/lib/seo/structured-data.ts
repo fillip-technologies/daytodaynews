@@ -107,8 +107,10 @@ export type ArticleSchemaInput = {
   description?: string | null;
   image?: string | null;
   publishedAt: Date;
-  updatedAt: Date;
-  authorName: string;
+  /** Last meaningful edit (see lib/visibility modifiedDate). */
+  modifiedAt: Date;
+  /** The writer, or null when bylines are off: the publication is then the author. */
+  authorName: string | null;
   section: string;
   keywords?: string[];
   /** Language the article text is in. */
@@ -124,8 +126,8 @@ export function articleNode(site: SiteSeo, locale: Locale, article: ArticleSchem
     description: article.description || undefined,
     image: article.image ? [absoluteUrl(site, article.image)] : undefined,
     datePublished: article.publishedAt.toISOString(),
-    dateModified: article.updatedAt.toISOString(),
-    author: [{ "@type": "Person", name: article.authorName }],
+    dateModified: article.modifiedAt.toISOString(),
+    author: article.authorName ? [{ "@type": "Person", name: article.authorName }] : [{ "@id": publisherId(site) }],
     publisher: publisherRef(site, locale),
     mainEntityOfPage: { "@type": "WebPage", "@id": article.url },
     isPartOf: { "@id": websiteId(site) },
@@ -168,5 +170,67 @@ export function collectionNode(
     inLanguage: localeTags[locale],
     isPartOf: { "@id": websiteId(site) },
     publisher: { "@id": publisherId(site) },
+  };
+}
+
+/** FAQPage for an article's FAQ section (only questions shown on the page). */
+export function faqPageNode(url: string, items: Array<{ q: string; a: string }>): Node {
+  return {
+    "@type": "FAQPage",
+    "@id": url + "#faq",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
+
+/** A directory listing: an Organization (business, startup) or a SoftwareApplication. */
+export function listingNode(
+  site: SiteSeo,
+  listing: {
+    kind: string;
+    url: string;
+    name: string;
+    description: string | null;
+    logoUrl: string | null;
+    website: string | null;
+    category: string | null;
+    country: string | null;
+    city: string | null;
+    foundedYear: number | null;
+    platforms: string | null;
+    pricingModel: string | null;
+  },
+): Node {
+  if (listing.kind === "SOFTWARE") {
+    return {
+      "@type": "SoftwareApplication",
+      "@id": listing.url + "#software",
+      name: listing.name,
+      description: listing.description || undefined,
+      url: listing.website || listing.url,
+      image: listing.logoUrl || undefined,
+      applicationCategory: listing.category || "BusinessApplication",
+      operatingSystem: listing.platforms || undefined,
+      mainEntityOfPage: { "@type": "WebPage", "@id": listing.url },
+    };
+  }
+  const address =
+    listing.country || listing.city
+      ? { "@type": "PostalAddress", addressLocality: listing.city || undefined, addressCountry: listing.country || undefined }
+      : undefined;
+  return {
+    "@type": "Organization",
+    "@id": listing.url + "#organization",
+    name: listing.name,
+    description: listing.description || undefined,
+    url: listing.website || listing.url,
+    logo: listing.logoUrl ? imageObject(site, listing.logoUrl) : undefined,
+    address,
+    foundingDate: listing.foundedYear ? String(listing.foundedYear) : undefined,
+    knowsAbout: listing.category || undefined,
+    mainEntityOfPage: { "@type": "WebPage", "@id": listing.url },
   };
 }

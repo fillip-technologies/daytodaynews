@@ -41,6 +41,11 @@ export type PublisherSettings = {
   sameAs: string[];
   /** schema.org type of every article page. */
   articleType: ArticleSchemaType;
+  /**
+   * Show writers' names on articles and cards. Off: no bylines anywhere, and
+   * structured data names the publication as the author.
+   */
+  showAuthors: boolean;
 };
 
 /**
@@ -119,6 +124,7 @@ export const defaultSiteSeo: SiteSeo = {
     socials: [],
     sameAs: [],
     articleType: "NewsArticle",
+    showAuthors: false,
   },
   developer: {
     name: "Fillip Technologies",
@@ -294,7 +300,16 @@ function cleanPublisher(input: unknown, current: PublisherSettings): Result<Publ
 
   return {
     ok: true,
-    value: { ...logoFile, logoSize, email, foundingDate, socials: socials.value, sameAs: sameAs.value, articleType },
+    value: {
+      ...logoFile,
+      logoSize,
+      email,
+      foundingDate,
+      socials: socials.value,
+      sameAs: sameAs.value,
+      articleType,
+      showAuthors: raw.showAuthors === true,
+    },
   };
 }
 

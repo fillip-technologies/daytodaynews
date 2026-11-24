@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { isFixedPageTranslated } from "@/lib/seo/page-metadata";
 import { seoPages } from "@/lib/seo/pages";
 import { getSiteSeo } from "@/lib/seo/site";
+import { liveArticleWhere, modifiedDate } from "@/lib/visibility";
+import { isThinListing, listingPath } from "@/lib/directory-config";
 
 // /sitemap.xml: every indexable public URL in each language it exists in, with
 // hreflang alternates. Built per request so new articles and SEO changes in
@@ -24,7 +26,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let articles: Array<{
     id: string;
     slug: string;
-    updatedAt: Date;
+    publishedAt: Date;
+    contentUpdatedAt: Date | null;
     imageUrl: string | null;
     translations: Array<{ locale: string }>;
   }> = [];
@@ -32,13 +35,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const [topicRows, articleRows, noIndexRows] = await Promise.all([
       prisma.topic.findMany({
-        where: { articles: { some: { status: "PUBLISHED" } } },
+        where: { articles: { some: liveArticleWhere() } },
         select: { id: true, slug: true, updatedAt: true },
       }),
       prisma.article.findMany({
-        where: { status: "PUBLISHED" },
+        where: liveArticleWhere(),
         orderBy: { publishedAt: "desc" },
-        select: { id: true, slug: true, updatedAt: true, imageUrl: true, translations: { select: { locale: true } } },
+        select: {
+          id: true,
+          slug: true,
+          publishedAt: true,
+          contentUpdatedAt: true,
+          imageUrl: true,
+          translations: { select: { locale: true } },
+        },
       }),
       prisma.seoMeta.findMany({
         where: { noIndex: true },
@@ -88,12 +98,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...article.translations.map((t) => t.locale).filter((l): l is Locale => isLocale(l) && l !== "en"),
     ];
     add(`/articles/${article.slug}`, articleLocales, article.id, {
-      lastModified: article.updatedAt,
+      lastModified: modifiedDate(article),
       changeFrequency: "monthly",
       priority: 0.8,
       // Cover photos in Google Images point back to the article.
       images: article.imageUrl ? [new URL(article.imageUrl, site.siteUrl).toString()] : undefined,
     });
+  }
+
+  // Directory profiles: approved ones with a real description (thin ones are noindex). English only.
+  try {
+    const listings = await prisma.listing.findMany({
+      where: { status: "APPROVED" },
+      select: { slug: true, kind: true, description: true, updatedAt: true },
+    });
+    for (const listing of listings) {
+      if (isThinListing(listing)) continue;
+      add(listingPath(listing.kind, listing.slug), ["en"], `listing:${listing.slug}`, {
+        lastModified: listing.updatedAt,
+        changeFrequency: "monthly",
+        priority: 0.5,
+      });
+    }
+  } catch (error) {
+    console.error("Sitemap: failed to load directory listings:", error);
   }
 
   return entries;

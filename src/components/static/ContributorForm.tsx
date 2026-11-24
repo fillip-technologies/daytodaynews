@@ -38,6 +38,7 @@ export function ContributorForm({ topics }: { topics: string[] }) {
       submitLabel={t.submit}
       successTitle={t.successTitle}
       successMessage={t.successMessage}
+      leadEvent={{ form: "pitch" }}
     />
   );
 }

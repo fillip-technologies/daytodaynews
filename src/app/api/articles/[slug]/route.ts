@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { liveArticleWhere } from "@/lib/visibility";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Public API: drafts and archived articles are not exposed.
     const article = await prisma.article.findFirst({
-      where: { slug, status: "PUBLISHED" },
+      where: { slug, ...liveArticleWhere() },
       include: {
         topic: true,
         author: { select: { id: true, name: true, bio: true, avatar: true } },

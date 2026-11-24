@@ -10,7 +10,10 @@ import {
 import type { Article, CategoryTone, CoverPattern, CoverSpec } from "@/types/article";
 import type { IconName } from "@/components/ui/Icon";
 import { defaultLocale, type Locale } from "@/i18n/config";
+import { parseFaq, parseLines, parseResources, parseSlugList } from "@/lib/article-extras";
+import { getSiteSeo } from "@/lib/seo/site";
 import type { Tone } from "@/lib/tones";
+import { isLiveArticle, liveArticleWhere } from "@/lib/visibility";
 import { queryArticles } from "./blog";
 import { paginate } from "./pagination";
 
@@ -74,13 +77,22 @@ export const getTopics = cache(async (locale: Locale = "en"): Promise<Topic[]> =
 
 /** What turning database rows into Articles in `locale` needs (both parts are per-request cached). */
 async function getArticleContext(locale: Locale) {
-  const [topics, translations] = await Promise.all([getTopics(locale), getArticleTranslations(locale)]);
-  return { locale, topicMap: new Map(topics.map((t) => [t.slug, t])), translations };
+  const [topics, translations, site] = await Promise.all([
+    getTopics(locale),
+    getArticleTranslations(locale),
+    getSiteSeo(),
+  ]);
+  return {
+    locale,
+    topicMap: new Map(topics.map((t) => [t.slug, t])),
+    translations,
+    showAuthors: site.publisher.showAuthors,
+  };
 }
 
 type ArticleContext = Awaited<ReturnType<typeof getArticleContext>>;
 
-function mapDbArticleToArticle(dbArticle: any, { locale, topicMap, translations }: ArticleContext): Article {
+function mapDbArticleToArticle(dbArticle: any, { locale, topicMap, translations, showAuthors }: ArticleContext): Article {
   const topic = topicMap.get(dbArticle.topicSlug);
   const translation = translations.get(dbArticle.id);
   let cover: CoverSpec | undefined;
@@ -114,7 +126,8 @@ function mapDbArticleToArticle(dbArticle: any, { locale, topicMap, translations 
     category: topic?.label || dbArticle.topicSlug,
     categoryHref: topic?.href || `/category/${dbArticle.topicSlug}`,
     categoryTone: ((topic?.tone === "pink" ? "accent-secondary" : topic?.tone) || "primary") as CategoryTone,
-    author: dbArticle.authorName || "Shruti Singh",
+    author: showAuthors ? dbArticle.authorName || "" : "",
+    kind: dbArticle.articleType === "GUEST" ? "guest" : dbArticle.articleType === "SPONSORED" ? "sponsored" : undefined,
     date: dateStr,
     readTime: dbArticle.readTime,
     topic: dbArticle.topicSlug,
@@ -131,7 +144,7 @@ export async function getHeroArticles(locale: Locale = "en"): Promise<Article[]>
     const [slugs, ctx] = await Promise.all([getHeroArticleSlugs(), getArticleContext(locale)]);
 
     const records = await prisma.article.findMany({
-      where: { slug: { in: slugs }, status: "PUBLISHED" },
+      where: { slug: { in: slugs }, ...liveArticleWhere() },
       omit: listOmit,
     });
 
@@ -153,7 +166,7 @@ export async function getHeroArticles(locale: Locale = "en"): Promise<Article[]>
       const fillers = await prisma.article.findMany({
         where: {
           slug: { notIn: existingSlugs },
-          status: "PUBLISHED",
+          ...liveArticleWhere(),
         },
         orderBy: [{ featured: "desc" }, { publishedAt: "desc" }],
         take: 3 - orderedArticles.length,
@@ -180,7 +193,7 @@ export async function getEditorsPicks(limit = 4, locale: Locale = "en"): Promise
     const [ctx, records] = await Promise.all([
       getArticleContext(locale),
       prisma.article.findMany({
-        where: { editorsPick: true, status: "PUBLISHED" },
+        where: { editorsPick: true, ...liveArticleWhere() },
         orderBy: { publishedAt: "desc" },
         take: limit,
         omit: listOmit,
@@ -200,7 +213,7 @@ export async function getLatestArticles(limit = 9, locale: Locale = "en"): Promi
     const [ctx, records] = await Promise.all([
       getArticleContext(locale),
       prisma.article.findMany({
-        where: { status: "PUBLISHED" },
+        where: { ...liveArticleWhere() },
         orderBy: { publishedAt: "desc" },
         take: limit,
         omit: listOmit,
@@ -220,7 +233,7 @@ export async function getTrendingArticles(limit = 5, locale: Locale = "en"): Pro
     const [ctx, records] = await Promise.all([
       getArticleContext(locale),
       prisma.article.findMany({
-        where: { trending: true, status: "PUBLISHED" },
+        where: { trending: true, ...liveArticleWhere() },
         orderBy: [{ trendingRank: "asc" }, { publishedAt: "desc" }],
         take: limit,
         omit: listOmit,
@@ -241,7 +254,7 @@ export async function getBlogArticles(locale: Locale = "en"): Promise<Article[]>
     const [ctx, records] = await Promise.all([
       getArticleContext(locale),
       prisma.article.findMany({
-        where: { status: "PUBLISHED" },
+        where: { ...liveArticleWhere() },
         orderBy: { publishedAt: "desc" },
         omit: listOmit,
       }),
@@ -264,7 +277,7 @@ export const getArticleSummaries = cache(async (locale: Locale = "en"): Promise<
     const [ctx, records] = await Promise.all([
       getArticleContext(locale),
       prisma.article.findMany({
-        where: { status: "PUBLISHED" },
+        where: { ...liveArticleWhere() },
         orderBy: { publishedAt: "desc" },
         select: {
           id: true,
@@ -281,6 +294,7 @@ export const getArticleSummaries = cache(async (locale: Locale = "en"): Promise<
           imageUrl: true,
           imageAlt: true,
           publishedAt: true,
+          articleType: true,
         },
       }),
     ]);
@@ -301,7 +315,7 @@ export async function getCategoryListing(
   pageSize = LISTING_PAGE_SIZE,
 ) {
   try {
-    const inTopic = { topicSlug: topic, status: "PUBLISHED" as const };
+    const inTopic = { topicSlug: topic, ...liveArticleWhere() };
     const [ctx, count, flagged, newest] = await Promise.all([
       getArticleContext(locale),
       prisma.article.count({ where: inTopic }),
@@ -361,7 +375,7 @@ export async function getPopularInCategory(topic: string, limit = 5, locale: Loc
     const [ctx, records] = await Promise.all([
       getArticleContext(locale),
       prisma.article.findMany({
-        where: { topicSlug: topic, status: "PUBLISHED" },
+        where: { topicSlug: topic, ...liveArticleWhere() },
         orderBy: [
           { trending: "desc" },
           { viewsCount: "desc" },
@@ -411,22 +425,23 @@ export async function searchArticles({
 
 /**
  * Fetch a single article by slug from the database and increment view counter.
- * Returns drafts too (with their `status`) so staff can preview them; public
- * pages must only show `status === "PUBLISHED"` (see canViewArticle).
- * Title, description, content and category label come in `locale` when a
- * translation exists; `contentLocale` says which language they are in, and
- * `translatedLocales` lists every language the article has.
+ * Returns drafts and scheduled articles too (with their `status` and date) so
+ * staff can preview them; public pages must only show live ones (see
+ * isLiveArticle and canViewArticle).
+ * Title, description, content, takeaways, FAQs and category texts come in
+ * `locale` when a translation exists; `contentLocale` says which language they
+ * are in, and `translatedLocales` lists every language the article has.
  *
  * Memoized per request, so the page and its metadata share one lookup and
  * count one view.
  */
 export const getArticleBySlug = cache(async (slug: string, locale: Locale = "en") => {
   try {
-    const [article, topics] = await Promise.all([
+    const [article, topics, site] = await Promise.all([
       prisma.article.findUnique({
         where: { slug },
         include: {
-          topic: true,
+          topic: { include: { translations: { where: { locale } } } },
           author: {
             select: {
               id: true,
@@ -441,11 +456,13 @@ export const getArticleBySlug = cache(async (slug: string, locale: Locale = "en"
         },
       }),
       getTopics(locale),
+      getSiteSeo(),
     ]);
 
     if (article) {
-      // Asynchronously increment views (staff previews of drafts don't count)
-      if (article.status === "PUBLISHED") {
+      // Asynchronously increment views (staff previews don't count). The
+      // counter does not touch contentUpdatedAt, so "Updated" dates stay true.
+      if (isLiveArticle(article)) {
         prisma.article
           .update({
             where: { slug },
@@ -456,15 +473,29 @@ export const getArticleBySlug = cache(async (slug: string, locale: Locale = "en"
 
       const { translations, topic, seo, ...rest } = article;
       const translation = translations.find((t) => t.locale === locale);
+      const { translations: topicTranslations, ...topicRow } = topic;
+      const topicText = topicTranslations[0];
       const topicLabel = topics.find((t) => t.slug === article.topicSlug)?.label || topic.label;
       return {
         ...rest,
         title: translation?.title || article.title,
         description: translation ? translation.description : article.description,
         content: translation ? translation.content : article.content,
-        topic: { ...topic, label: topicLabel },
+        focusKeyword: translation ? translation.focusKeyword : article.focusKeyword,
+        takeaways: parseLines(translation ? translation.takeaways : article.takeaways),
+        faq: parseFaq(translation ? translation.faq : article.faq),
+        resources: parseResources(article.resources),
+        relatedListings: parseSlugList(article.relatedListings),
+        topic: {
+          ...topicRow,
+          label: topicLabel,
+          ctaTitle: topicText?.ctaTitle || topic.ctaTitle,
+          ctaText: topicText?.ctaText || topic.ctaText,
+          ctaLabel: topicText?.ctaLabel || topic.ctaLabel,
+        },
         contentLocale: (translation ? locale : "en") as Locale,
         translatedLocales: ["en", ...translations.map((t) => t.locale)] as Locale[],
+        showAuthors: site.publisher.showAuthors,
         /** Admin SEO overrides for this language, if any. */
         seo: seo[0] ?? null,
       };
@@ -474,3 +505,82 @@ export const getArticleBySlug = cache(async (slug: string, locale: Locale = "en"
   }
   return null;
 });
+
+/** Live articles by slug, in the given order (missing or unpublished ones are skipped). */
+export async function getLiveArticlesBySlugs(slugs: string[], locale: Locale = "en"): Promise<Article[]> {
+  if (slugs.length === 0) return [];
+  try {
+    const [ctx, records] = await Promise.all([
+      getArticleContext(locale),
+      prisma.article.findMany({ where: { slug: { in: slugs }, ...liveArticleWhere() }, omit: listOmit }),
+    ]);
+    const bySlug = new Map(records.map((r) => [r.slug, r]));
+    return slugs.flatMap((slug) => {
+      const record = bySlug.get(slug);
+      return record ? [mapDbArticleToArticle(record, ctx)] : [];
+    });
+  } catch (error) {
+    console.error("Failed to load articles by slug:", error);
+    return [];
+  }
+}
+
+/**
+ * The topic cluster an article belongs to: its pillar guide and the other
+ * supporting articles of that pillar (for a pillar itself: all its supporting
+ * articles). Newest first.
+ */
+export async function getPillarSeries(
+  article: { slug: string; isPillar: boolean; pillarSlug: string | null },
+  locale: Locale = "en",
+): Promise<{ pillar: Article | null; members: Article[] }> {
+  const pillarSlug = article.isPillar ? article.slug : article.pillarSlug;
+  if (!pillarSlug) return { pillar: null, members: [] };
+  try {
+    const [ctx, pillarRecord, memberRecords] = await Promise.all([
+      getArticleContext(locale),
+      article.isPillar
+        ? null
+        : prisma.article.findFirst({ where: { slug: pillarSlug, ...liveArticleWhere() }, omit: listOmit }),
+      prisma.article.findMany({
+        where: { pillarSlug, slug: { not: article.slug }, ...liveArticleWhere() },
+        orderBy: { publishedAt: "desc" },
+        take: 12,
+        omit: listOmit,
+      }),
+    ]);
+    return {
+      pillar: pillarRecord ? mapDbArticleToArticle(pillarRecord, ctx) : null,
+      members: memberRecords.map((r) => mapDbArticleToArticle(r, ctx)),
+    };
+  } catch (error) {
+    console.error(`Failed to load the series of "${article.slug}":`, error);
+    return { pillar: null, members: [] };
+  }
+}
+
+/** Live articles of one type (guest contributions or sponsored), newest first, paginated. */
+export async function getArticlesByType(
+  type: "GUEST" | "SPONSORED",
+  page = 1,
+  locale: Locale = "en",
+  pageSize = LISTING_PAGE_SIZE,
+) {
+  try {
+    const where = { articleType: type, ...liveArticleWhere() };
+    const [ctx, total] = await Promise.all([getArticleContext(locale), prisma.article.count({ where })]);
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(Math.max(1, page), pageCount);
+    const records = await prisma.article.findMany({
+      where,
+      orderBy: { publishedAt: "desc" },
+      skip: (safePage - 1) * pageSize,
+      take: pageSize,
+      omit: listOmit,
+    });
+    return { items: records.map((r) => mapDbArticleToArticle(r, ctx)), page: safePage, pageCount, total };
+  } catch (error) {
+    console.error(`Failed to load ${type} articles:`, error);
+    return { items: [] as Article[], page: 1, pageCount: 1, total: 0 };
+  }
+}

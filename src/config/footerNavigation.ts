@@ -21,8 +21,7 @@ export const exploreTopics = ["ai-automation", "software", "development", "busin
  * Groups after Explore; titles and labels come from the dictionary. Every link
  * goes to a page or section that exists: Editors' Picks, Trending and Topics are
  * homepage sections (a hidden section just lands on the homepage), guides are a
- * search, advertising enquiries use the contact form, and cookies are a section
- * of the privacy policy.
+ * search, and cookies are a section of the privacy policy.
  */
 export const footerGroups: Array<{
   id: keyof FooterText["groups"];
@@ -46,8 +45,21 @@ export const footerGroups: Array<{
     links: [
       { key: "about", href: "/about" },
       { key: "contact", href: "/contact" },
-      { key: "advertise", href: "/contact" },
+      { key: "editorialPolicy", href: "/editorial-policy" },
       { key: "writeForUs", href: "/write-for-us" },
+      { key: "guestContributors", href: "/guest-contributors" },
+    ],
+  },
+  {
+    id: "directories",
+    tone: "accent-secondary",
+    links: [
+      { key: "businessDirectory", href: "/business-directory" },
+      { key: "softwareDirectory", href: "/software-directory" },
+      { key: "startupDirectory", href: "/startup-directory" },
+      { key: "listBusiness", href: "/business-directory/submit" },
+      { key: "advertise", href: "/advertise" },
+      { key: "sponsoredInsights", href: "/sponsored-insights" },
     ],
   },
   {

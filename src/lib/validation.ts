@@ -36,6 +36,15 @@ export function cleanHttpUrl(value: unknown, maxLength = 2048): string | null {
   }
 }
 
+/**
+ * True when the hidden honeypot field (see UiForm) was filled in: a bot. Such
+ * submissions get a normal "thank you" but are not stored or emailed.
+ */
+export function isHoneypotFilled(values: Record<string, unknown> | null | undefined): boolean {
+  const value = values?._hp;
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 export const FORM_LIMITS = {
   name: 100,
   subject: 150,

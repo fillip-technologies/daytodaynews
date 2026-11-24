@@ -225,6 +225,36 @@ export const pageSchemas: PageSchema[] = [
         ],
       },
       {
+        title: "Submission process",
+        fields: [
+          { key: "processTitle", label: "Section title", kind: "line" },
+          {
+            key: "processSteps",
+            label: "Steps",
+            kind: "items",
+            max: 8,
+            itemLabel: "Step",
+            fields: [
+              { key: "title", label: "Step", kind: "line" },
+              { key: "body", label: "Text", kind: "text" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Standards & policies",
+        fields: [
+          { key: "lengthTitle", label: "Length & originality: title", kind: "line" },
+          { key: "lengthBody", label: "Length & originality: text", kind: "markdown" },
+          { key: "authorTitle", label: "Author requirements: title", kind: "line" },
+          { key: "authorList", label: "Author requirements", kind: "list", max: 10, itemLabel: "Requirement" },
+          { key: "reviewTitle", label: "Editorial review: title", kind: "line" },
+          { key: "reviewBody", label: "Editorial review: text", kind: "markdown" },
+          { key: "sponsoredTitle", label: "Sponsored content policy: title", kind: "line" },
+          { key: "sponsoredBody", label: "Sponsored content policy: text", kind: "markdown" },
+        ],
+      },
+      {
         title: "Pitch form",
         fields: [
           { key: "pitchTitle", label: "Form title", kind: "line" },
@@ -237,6 +267,75 @@ export const pageSchemas: PageSchema[] = [
         ],
       },
     ],
+  },
+  {
+    key: "advertise",
+    label: "Advertise",
+    path: "/advertise",
+    groups: [
+      hero(true),
+      {
+        title: "Ways to work with us",
+        fields: [
+          { key: "optionsTitle", label: "Section title", kind: "line" },
+          { key: "optionsDescription", label: "Section introduction", kind: "text" },
+          {
+            key: "options",
+            label: "Options (also the choices in the enquiry form)",
+            kind: "items",
+            max: 10,
+            itemLabel: "Option",
+            fields: [
+              { key: "title", label: "Option", kind: "line" },
+              { key: "body", label: "Text", kind: "text" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Audience",
+        fields: [
+          { key: "audienceTitle", label: "Section title", kind: "line" },
+          { key: "audienceDescription", label: "Section introduction", kind: "text" },
+          {
+            key: "stats",
+            label: "Statistics (add only verified numbers)",
+            kind: "items",
+            max: 6,
+            itemLabel: "Statistic",
+            fields: [
+              { key: "value", label: "Number, e.g. 50,000+", kind: "line" },
+              { key: "label", label: "What it measures, e.g. monthly readers", kind: "line" },
+            ],
+          },
+        ],
+      },
+      {
+        title: "Editorial disclosure",
+        fields: [
+          { key: "disclosureTitle", label: "Section title", kind: "line" },
+          { key: "disclosureBody", label: "Text", kind: "markdown" },
+        ],
+      },
+      {
+        title: "Enquiry form & media kit",
+        fields: [
+          { key: "formTitle", label: "Form title", kind: "line" },
+          { key: "formNote", label: "Line under the title", kind: "line" },
+          { key: "budgets", label: "Budget ranges in the form", kind: "list", max: 8, itemLabel: "Range" },
+          {
+            key: "mediaKitUrl",
+            label: "Media kit link (PDF), optional",
+            kind: "line",
+            hint: "A link to the media kit (https://…). The button is hidden while this is empty.",
+          },
+          { key: "mediaKitLabel", label: "Media kit button text", kind: "line" },
+        ],
+      },
+    ],
+  },
+  {
+    ...legalSchema("editorial-policy", "Editorial Policy", "/editorial-policy"),
   },
   legalSchema("privacy-policy", "Privacy Policy", "/privacy-policy"),
   legalSchema("terms", "Terms & Conditions", "/terms"),
@@ -343,14 +442,13 @@ export const pageDefaults: Record<string, PageValues> = {
     lookForTitle: t("What We Look For"),
     lookForDescription: t("Topics our readers care about most."),
     topics: [
-      { label: t("AI & Automation"), description: t("Agents, workflows and real use cases") },
-      { label: t("Software Development"), description: t("Architecture, delivery and costs") },
-      { label: t("Web & App Development"), description: t("Frameworks, performance and UX") },
-      { label: t("Business Technology"), description: t("Systems that help teams grow") },
-      { label: t("Startups"), description: t("Stacks, teams and early decisions") },
-      { label: t("Hiring & Outsourcing"), description: t("Building and scaling tech teams") },
-      { label: t("Digital Growth"), description: t("SEO, content and conversion") },
-      { label: t("Emerging Technology"), description: t("What is next, explained practically") },
+      { label: t("AI & Automation"), description: t("AI agents, workflows, tools, costs and real business use cases") },
+      { label: t("Software & IT"), description: t("Software development, SaaS, ERP, CRM, cloud, cybersecurity and APIs") },
+      { label: t("Business Technology & Growth"), description: t("Digital transformation, automation, sales and marketing technology") },
+      { label: t("Startups & Entrepreneurship"), description: t("SaaS models, MVPs, funding, product development and scaling") },
+      { label: t("Industry Technology"), description: t("Technology in healthcare, education, manufacturing, finance and retail") },
+      { label: t("Hardware & Emerging Technology"), description: t("IoT, networking, semiconductors, robotics and smart devices") },
+      { label: t("Business Opportunities & Global Markets"), description: t("B2B opportunities, market entry, trade and procurement") },
     ],
     goodTitle: t("Good Submissions"),
     goodItems: [
@@ -369,8 +467,121 @@ export const pageDefaults: Record<string, PageValues> = {
       "Proper sources and attribution where necessary.",
       "Clear structure: headings, short paragraphs and examples.",
     ),
+    processTitle: t("How Submission Works"),
+    processSteps: [
+      { title: t("Pitch an outline"), body: t("Send a working title and a short outline with the form below. No full draft yet.") },
+      { title: t("Editorial feedback"), body: t("An editor replies within a week with a yes, a suggested angle, or a no with reasons.") },
+      { title: t("Write the draft"), body: t("Write the full article following our structure: takeaways, examples, comparison, FAQs and sources.") },
+      { title: t("Review & fact-check"), body: t("We edit for clarity, check facts and sources, and may ask for changes.") },
+      { title: t("Publication"), body: t("We schedule the article, add internal links and share it with our readers and newsletter.") },
+    ],
+    lengthTitle: t("Article Length & Originality"),
+    lengthBody: t(
+      "Most guides run **1,500–2,500 words**; explainers 1,200–1,800 and comparisons 1,800–2,500. Length follows the topic: a complete answer matters more than a word count.\n\nArticles must be **original and unpublished** (including on your own site), written for our readers, and based on real experience. AI may help with research or editing, but the ideas, examples and final text must be yours and fact-checked.",
+    ),
+    authorTitle: t("Who Can Write for Us"),
+    authorList: list(
+      "Practitioners: consultants, founders, CTOs, architects, engineers and specialists.",
+      "First-hand experience with the subject you write about.",
+      "A real name and a short, verifiable professional bio.",
+      "Disclosure of any commercial interest in the products you mention.",
+    ),
+    reviewTitle: t("Editorial Review"),
+    reviewBody: t(
+      "Every contribution is edited and fact-checked by our team before publishing. We may change headlines, structure and wording, add internal links, and remove promotional claims. Publication is never guaranteed, and accepted guest articles are labelled as guest contributions.",
+    ),
+    sponsoredTitle: t("Sponsored Content Policy"),
+    sponsoredBody: t(
+      "Paid placements are a separate product, described on our [Advertise](/advertise) page. Sponsored articles are clearly labelled, reviewed by our editors, and their links to the sponsor carry rel=\"sponsored\". We do not sell dofollow links or promise search rankings. Guest contributions are free and never include paid links.",
+    ),
     pitchTitle: t("Pitch your idea"),
     pitchNote: t("Share a short outline first; there is no need to send a full draft."),
+  },
+  advertise: {
+    heroEyebrow: t("Advertise with DayTodayNews"),
+    heroTitle: t("Reach technology and business"),
+    heroHighlight: t("decision-makers."),
+    heroDescription: t(
+      "Put your product, service or story in front of founders, CTOs, business owners and technology buyers who read DayTodayNews to make better decisions.",
+    ),
+    optionsTitle: t("Ways to Work With Us"),
+    optionsDescription: t("Every paid placement is clearly labelled and reviewed by our editors."),
+    options: [
+      { title: t("Sponsored articles"), body: t("An in-depth article or case study about your product, written to our editorial standards and labelled as sponsored.") },
+      { title: t("Display advertising"), body: t("Banner placements on the homepage, article pages, category pages and directories.") },
+      { title: t("Newsletter sponsorship"), body: t("A clearly marked sponsor slot in our weekly brief to subscribers.") },
+      { title: t("Brand features"), body: t("Founder interviews, expert interviews and brand stories for your audience.") },
+      { title: t("Product launches"), body: t("Launch announcements and product demonstrations for new tools and services.") },
+      { title: t("Sponsored company profiles"), body: t("A Featured listing in our business, software or startup directory.") },
+    ],
+    audienceTitle: t("Our Audience"),
+    audienceDescription: t(
+      "Readers come from the United States, the United Kingdom, Canada, Australia, the UAE and India, looking for practical guidance on AI, software and business technology.",
+    ),
+    stats: [],
+    disclosureTitle: t("Editorial Disclosure"),
+    disclosureBody: t(
+      "Advertising never decides what we write. Sponsored articles are labelled **Sponsored**, name the sponsor and are reviewed by our editors. Links in paid placements carry rel=\"sponsored\", as Google requires: we do not sell dofollow links or promise rankings. Featured directory listings are marked as paid placements. Read our [editorial policy](/editorial-policy).",
+    ),
+    formTitle: t("Tell us about your campaign"),
+    formNote: t("We reply within two working days with options and prices."),
+    budgets: list("Under $500", "$500 – $2,000", "$2,000 – $5,000", "$5,000+", "Not sure yet"),
+    mediaKitUrl: t(""),
+    mediaKitLabel: t("Download the media kit"),
+  },
+  "editorial-policy": {
+    title: t("Editorial Policy"),
+    description: t(
+      "How DayTodayNews chooses, researches, writes, reviews and corrects its articles, and how we keep editorial and commercial content apart.",
+    ),
+    lastUpdated: "",
+    sections: [
+      legalSection(
+        "standards",
+        "Our Standards",
+        "We publish practical, accurate and original guidance on technology, AI, software and business. Every article answers a real question our readers have, explains trade-offs honestly, and helps them make a decision. We would rather publish one complete answer than several thin articles on the same topic.",
+      ),
+      legalSection(
+        "research",
+        "Research, Sources & Citations",
+        "Facts, figures and prices come from primary or authoritative sources, which we link to. We do not invent statistics or search figures. Cost and pricing information is described as an estimate with its date and source, because prices change.",
+      ),
+      legalSection(
+        "review",
+        "Editorial Review & Fact-Checking",
+        "Every article has an owner responsible for its accuracy and is reviewed by an editor before publishing. The editor checks facts, sources, claims and structure. Articles are marked with their publication date and, when meaningfully changed, the date they were updated.",
+      ),
+      legalSection(
+        "ai",
+        "Use of AI",
+        "We may use AI tools to support research, outlines and editing. AI-generated text is never published without human review: a person checks every fact and adds the original analysis, examples and judgement.",
+      ),
+      legalSection(
+        "corrections",
+        "Corrections",
+        "If we get something wrong, we fix it promptly and, for significant errors, say what changed. To report an error, please use our [contact page](/contact) and choose Editorial.",
+      ),
+      legalSection(
+        "guest",
+        "Guest Contributions",
+        "We welcome articles from practitioners (see [Write for Us](/write-for-us)). Guest articles go through the same review as our own, are labelled as guest contributions, and contain no paid links.",
+      ),
+      legalSection(
+        "sponsored",
+        "Sponsored Content & Advertising",
+        "Sponsored articles are clearly labelled, name the sponsor and are reviewed by our editors. Links in paid content carry rel=\"sponsored\". Advertisers do not influence our independent coverage, and we do not sell links for search rankings. See [Advertise](/advertise).",
+      ),
+      legalSection(
+        "directory",
+        "Directory Listings",
+        "Companies list themselves in our directories; our team reviews each listing before it goes live. **Featured** listings are paid placements. **Verified** means our team has checked the company's details. A listing is not an endorsement.",
+      ),
+      legalSection(
+        "independence",
+        "Independence",
+        "Editorial decisions, including which topics we cover and what we conclude, are made by the DayTodayNews editorial team. Commercial relationships, including with our technology partner, do not determine our editorial opinions.",
+      ),
+    ],
   },
   "privacy-policy": {
     title: t("Privacy Policy"),
