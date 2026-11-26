@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/Icon";
 import { dictionaries } from "@/i18n/dictionaries";
 import { cn } from "@/lib/cn";
 import {
+  autoArticles,
   MAX_CATEGORY_BLOCKS,
   newSection,
   SECTION_RULES,
@@ -26,6 +27,8 @@ export type AdminArticle = {
   /** ISO date. */
   date: string;
   image: string | null;
+  /** Marked Featured: leads its category page and automatic category blocks. */
+  featured: boolean;
   editorsPick: boolean;
   trending: boolean;
   trendingRank: number | null;
@@ -231,8 +234,8 @@ export function HomepageManager({ initialSections, saved, articles, categories }
           <h1 className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">Homepage</h1>
           <p className="mt-1 max-w-3xl text-xs text-text-muted">
             Everything on the homepage is set here: which sections show, their order, their titles in English and
-            Hindi, and every story in them. Nothing changes on its own: a new article appears on the homepage only
-            once you add it here.
+            Hindi, and their stories. Category blocks and Latest news are Automatic by default: a newly published
+            article shows up there on its own. Switch Automatic off in a section to pick its stories by hand.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -262,7 +265,10 @@ export function HomepageManager({ initialSections, saved, articles, categories }
             section.title.en ||
             (section.type === "category" ? (category?.label ?? "Category block") : defaultTitles[section.type].en);
           const counts = [
-            rules.articles > 0 && `${section.articles.length}/${rules.articles} stories`,
+            rules.articles > 0 &&
+              (section.auto
+                ? `Automatic: newest ${rules.articles} stories`
+                : `${section.articles.length}/${rules.articles} stories`),
             rules.side > 0 && `${section.sideArticles.length}/${rules.side} in the ${section.type === "top" ? "headlines" : "trending"} list`,
             section.type === "topics" && `${section.categories.length} categories`,
           ].filter(Boolean);
@@ -386,17 +392,41 @@ export function HomepageManager({ initialSections, saved, articles, categories }
                     />
                   )}
 
-                  {rules.articles > 0 && (
-                    <ArticleList
-                      label={listLabels[section.type]?.main ?? "Stories"}
-                      slugs={section.articles}
-                      max={rules.articles}
-                      articles={articles}
-                      bySlug={articleBySlug}
-                      {...poolFor(section, false)}
-                      onChange={(slugs) => update(section.id, { articles: slugs })}
-                    />
+                  {rules.canAuto && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-primary/20 bg-primary/5 p-3.5">
+                      <Switch
+                        checked={section.auto}
+                        onChange={(auto) => update(section.id, { auto })}
+                        label="Automatic"
+                      />
+                      <p className="min-w-56 flex-1 text-[11px] text-text-muted">
+                        {section.auto
+                          ? section.type === "category"
+                            ? "On: shows the newest stories from this category, so a new article appears here as soon as it is published. A story marked Featured leads, like on the category page."
+                            : "On: shows the newest published stories, so a new article appears here as soon as it is published."
+                          : "Off: shows only the stories you pick below, in your order. New articles are not added on their own."}
+                      </p>
+                    </div>
                   )}
+
+                  {rules.articles > 0 &&
+                    (section.auto ? (
+                      <AutoPreview
+                        label={listLabels[section.type]?.main ?? "Stories"}
+                        max={rules.articles}
+                        articles={autoArticles(section, articles, (article) => article.category)}
+                      />
+                    ) : (
+                      <ArticleList
+                        label={listLabels[section.type]?.main ?? "Stories"}
+                        slugs={section.articles}
+                        max={rules.articles}
+                        articles={articles}
+                        bySlug={articleBySlug}
+                        {...poolFor(section, false)}
+                        onChange={(slugs) => update(section.id, { articles: slugs })}
+                      />
+                    ))}
 
                   {rules.side > 0 && (
                     <>
@@ -755,10 +785,53 @@ function ArticleList({
   );
 }
 
+/** What an automatic section shows right now (read-only). */
+function AutoPreview({ label, max, articles }: { label: string; max: number; articles: AdminArticle[] }) {
+  return (
+    <div className="rounded-xl border border-border bg-background p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className={labelClass}>{label}: showing now</p>
+        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+          {articles.length} / {max}
+        </span>
+      </div>
+      {articles.length === 0 ? (
+        <p className="mt-2 rounded-lg border border-dashed border-border p-4 text-center text-[11px] text-text-muted">
+          No published stories yet, so this part stays hidden on the website until one is published.
+        </p>
+      ) : (
+        <ol className="mt-2 space-y-1.5">
+          {articles.map((article, index) => (
+            <li
+              key={article.slug}
+              className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-elevated p-1.5 pr-2"
+            >
+              <span className="w-5 shrink-0 text-center font-mono text-[11px] font-bold text-text-muted">
+                {index + 1}
+              </span>
+              <Thumb src={article.image} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold text-text-primary">{article.title}</span>
+                <span className="block truncate text-[11px] text-text-muted">
+                  <ArticleMeta article={article} />
+                </span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <p className="mt-2 text-[11px] text-text-muted">
+        Updates by itself when articles are published, unpublished or re-dated.
+      </p>
+    </div>
+  );
+}
+
 function ArticleMeta({ article }: { article: AdminArticle }) {
   return (
     <>
       {article.categoryLabel} · {article.date}
+      {article.featured && " · Featured"}
       {article.editorsPick && " · ★ Editor's Pick"}
       {article.trending && " · 🔥 Trending"}
     </>

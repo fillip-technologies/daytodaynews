@@ -1,8 +1,10 @@
 import { cleanLine } from "@/lib/validation";
 
-// The homepage layout, as edited under Admin → Homepage. Every section and
-// every story on it is chosen there; the page never fills itself in. Pure
-// module: shared by the admin editor, the server action and the public page.
+// The homepage layout, as edited under Admin → Homepage. Sections, their order
+// and titles are chosen there. A category block or the Latest grid can be
+// automatic (newest published stories, so a new article shows up on its own)
+// or hand-picked. Pure module: shared by the admin editor, the server action
+// and the public page.
 
 /** SiteSetting key holding the layout as JSON. */
 export const HOMEPAGE_SETTING = "homepage";
@@ -16,6 +18,12 @@ export type HomeSection = {
   id: string;
   type: HomeSectionType;
   enabled: boolean;
+  /**
+   * Automatic: the main list shows the newest published stories (a category
+   * block: from its category) and `articles` is ignored. Only where the rules
+   * allow it (`canAuto`); always false elsewhere.
+   */
+  auto: boolean;
   /** Empty uses the default title (a category block: the category's name). */
   title: HomeText;
   description: HomeText;
@@ -42,6 +50,8 @@ type SectionRules = {
   /** Category blocks can be added more than once; other sections exist once. */
   repeatable: boolean;
   hasDescription: boolean;
+  /** The main list can fill itself with the newest stories (on by default). */
+  canAuto: boolean;
 };
 
 export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
@@ -53,6 +63,7 @@ export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
     categories: 0,
     repeatable: false,
     hasDescription: false,
+    canAuto: false,
   },
   top: {
     label: "Top stories",
@@ -62,6 +73,7 @@ export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
     categories: 0,
     repeatable: false,
     hasDescription: false,
+    canAuto: false,
   },
   topics: {
     label: "Topics strip",
@@ -71,6 +83,7 @@ export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
     categories: 16,
     repeatable: false,
     hasDescription: false,
+    canAuto: false,
   },
   category: {
     label: "Category block",
@@ -80,6 +93,7 @@ export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
     categories: 1,
     repeatable: true,
     hasDescription: false,
+    canAuto: true,
   },
   editorsPicks: {
     label: "Editors' Picks",
@@ -89,6 +103,7 @@ export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
     categories: 0,
     repeatable: false,
     hasDescription: true,
+    canAuto: false,
   },
   latest: {
     label: "Latest news + Trending",
@@ -98,6 +113,7 @@ export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
     categories: 0,
     repeatable: false,
     hasDescription: false,
+    canAuto: true,
   },
   newsletter: {
     label: "Newsletter sign-up",
@@ -107,6 +123,7 @@ export const SECTION_RULES: Record<HomeSectionType, SectionRules> = {
     categories: 0,
     repeatable: false,
     hasDescription: true,
+    canAuto: false,
   },
 };
 
@@ -122,6 +139,7 @@ export function newSection(type: HomeSectionType, id: string, categories: string
     id,
     type,
     enabled: true,
+    auto: SECTION_RULES[type].canAuto,
     title: emptyText(),
     description: emptyText(),
     articles: [],
@@ -181,6 +199,7 @@ export function cleanHomepage(
       id,
       type,
       enabled: raw.enabled !== false,
+      auto: rules.canAuto && raw.auto !== false,
       title: cleanText(raw.title, 120),
       description: rules.hasDescription ? cleanText(raw.description, 300) : emptyText(),
       articles: cleanList(raw.articles, articleSlugs, rules.articles),
@@ -202,6 +221,23 @@ export function withAllSections(sections: HomeSection[]): HomeSection[] {
   return [...sections, ...missing.map((type) => ({ ...newSection(type, type), enabled: false }))];
 }
 
+/**
+ * The stories an automatic section shows, taken from `newest` (every published
+ * article, newest first). A category block leads like its category page: the
+ * newest story marked Featured, else the newest one, then the rest by date.
+ */
+export function autoArticles<T extends { featured?: boolean }>(
+  section: HomeSection,
+  newest: T[],
+  categoryOf: (article: T) => string | undefined,
+): T[] {
+  const max = SECTION_RULES[section.type].articles;
+  if (section.type !== "category") return newest.slice(0, max);
+  const inCategory = newest.filter((article) => categoryOf(article) === section.categories[0]);
+  const lead = inCategory.find((article) => article.featured) ?? inCategory[0];
+  return lead ? [lead, ...inCategory.filter((article) => article !== lead)].slice(0, max) : [];
+}
+
 /** Reads the stored layout, or null when there is none or it can't be read. */
 export function parseHomepage(json: string): HomeSection[] | null {
   try {
@@ -221,6 +257,8 @@ export function parseHomepage(json: string): HomeSection[] | null {
           id: raw.id,
           type,
           enabled: raw.enabled !== false,
+          // Layouts saved before this option existed have no flag: automatic where allowed.
+          auto: SECTION_RULES[type].canAuto && raw.auto !== false,
           title: text(raw.title),
           description: text(raw.description),
           articles: list(raw.articles),

@@ -12,7 +12,7 @@ import { TopStories } from "@/components/home/TopStories";
 import { TrendingPosts } from "@/components/home/TrendingPosts";
 import { getI18n } from "@/i18n/server";
 import { getArticleSummaries, getTopics } from "@/lib/articles";
-import type { HomeSection, HomeText } from "@/lib/homepage";
+import { autoArticles, type HomeSection, type HomeText } from "@/lib/homepage";
 import { fixedPageMetadata, localeFromParams } from "@/lib/seo/page-metadata";
 import { getHomepage } from "@/lib/settings";
 
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]">): Promis
   return fixedPageMetadata("home", await localeFromParams(params));
 }
 
-/** The front page, exactly as laid out under Admin → Homepage. */
+/** The front page, as laid out under Admin → Homepage (automatic sections fill themselves). */
 export default async function Home() {
   const { locale, t } = await getI18n();
   const [{ sections }, articles, topics] = await Promise.all([
@@ -32,6 +32,9 @@ export default async function Home() {
   // Only published stories are listed, so unpublished picks drop out here.
   const bySlug = new Map(articles.flatMap((article) => (article.slug ? [[article.slug, article] as const] : [])));
   const pick = (slugs: string[]) => slugs.flatMap((slug) => bySlug.get(slug) ?? []);
+  // An automatic section shows the newest stories; a hand-picked one, its list.
+  const mainList = (section: HomeSection) =>
+    section.auto ? autoArticles(section, articles, (article) => article.topic) : pick(section.articles);
   const topicBySlug = new Map(topics.map((topic) => [topic.slug, topic]));
   // The admin's wording in this language; undefined falls back to each section's default.
   const text = (value: HomeText) => (locale === "hi" ? value.hi : value.en) || undefined;
@@ -66,7 +69,7 @@ export default async function Home() {
             href={topic.href || `/category/${topic.slug}`}
             icon={topic.icon}
             tone={topic.tone}
-            articles={pick(section.articles)}
+            articles={mainList(section)}
           />
         );
       }
@@ -83,7 +86,7 @@ export default async function Home() {
         return (
           <LatestArticles
             title={text(section.title)}
-            articles={pick(section.articles)}
+            articles={mainList(section)}
             sidebar={
               trending.length > 0 ? (
                 <TrendingPosts posts={trending} title={text(section.sideTitle)} viewAllHref="" />
