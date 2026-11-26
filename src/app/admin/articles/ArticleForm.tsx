@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createArticle, updateArticle } from "@/actions/articles";
+import { clearDraft, draftKey, readDraft, saveFailureMessage, writeDraft } from "./article-draft";
 import { uploadArticleImage } from "@/actions/upload";
 import { ArticleContent } from "@/components/article/ArticleContent";
 import { SeoFields } from "@/components/admin/SeoFields";
@@ -82,59 +83,215 @@ type ArticleFormProps = {
   seoContext: { siteUrl: string; titleTemplate: Record<Locale, string> };
 };
 
-export function ArticleForm({ initialData, topics, authors, pillars, listings, seoContext }: ArticleFormProps) {
+/** Everything the editor lets you change: what a browser draft keeps. */
+type FormValues = {
+  title: string;
+  slug: string;
+  slugManuallyEdited: boolean;
+  topicSlug: string;
+  authorId: string;
+  description: string;
+  content: string;
+  readTime: number;
+  featured: boolean;
+  editorsPick: boolean;
+  trending: boolean;
+  status: ArticleStatus;
+  /** Local date-time, as the picker shows it. */
+  publishedAt: string;
+  articleType: string;
+  sponsorName: string;
+  sponsorUrl: string;
+  isPillar: boolean;
+  pillarSlug: string;
+  relatedListings: string[];
+  resources: ResourceLink[];
+  framework: Record<Locale, FrameworkText>;
+  hiTitle: string;
+  hiDescription: string;
+  hiContent: string;
+  seo: Record<Locale, SeoFieldsValue>;
+  coverPattern: string;
+  coverTones: string;
+  coverIcon: string;
+  imageUrl: string;
+  imageAlt: string;
+};
+
+/** The form as stored on the server (or empty, for a new story). */
+function savedValues({ initialData, topics, authors }: ArticleFormProps): FormValues {
+  return {
+    title: initialData?.title || "",
+    slug: initialData?.slug || "",
+    slugManuallyEdited: Boolean(initialData?.slug),
+    topicSlug: initialData?.topicSlug || topics[0]?.value || "",
+    authorId: initialData?.authorId || authors[0]?.value || "",
+    description: initialData?.description || "",
+    content: initialData?.content || "",
+    readTime: initialData?.readTime || 5,
+    featured: initialData?.featured || false,
+    editorsPick: initialData?.editorsPick || false,
+    trending: initialData?.trending || false,
+    status: initialData?.status || "PUBLISHED",
+    publishedAt: toLocalInput(initialData?.publishedAt),
+    articleType: initialData?.articleType || "EDITORIAL",
+    sponsorName: initialData?.sponsorName || "",
+    sponsorUrl: initialData?.sponsorUrl || "",
+    isPillar: initialData?.isPillar || false,
+    pillarSlug: initialData?.pillarSlug || "",
+    relatedListings: initialData?.relatedListings || [],
+    resources: initialData?.resources || [],
+    framework: initialData?.framework ?? { en: emptyFramework, hi: emptyFramework },
+    hiTitle: initialData?.hi?.title || "",
+    hiDescription: initialData?.hi?.description || "",
+    hiContent: initialData?.hi?.content || "",
+    seo: initialData?.seo ?? { en: emptySeoFields, hi: emptySeoFields },
+    coverPattern: initialData?.coverPattern || "orbit",
+    coverTones: initialData?.coverTones || JSON.stringify(["accent-secondary", "pink"]),
+    coverIcon: initialData?.coverIcon || "sparkles",
+    imageUrl: initialData?.imageUrl || "",
+    imageAlt: initialData?.imageAlt || "",
+  };
+}
+
+const subscribeToNothing = () => () => {};
+
+/**
+ * The article editor. It runs in the browser only, so it can bring back the
+ * unsaved changes kept there (see article-draft.ts) the moment it opens.
+ */
+export function ArticleForm(props: ArticleFormProps) {
+  const inBrowser = useSyncExternalStore(subscribeToNothing, () => true, () => false);
+  // Discarding a draft opens a fresh editor on the saved version.
+  const [session, setSession] = useState(0);
+
+  if (!inBrowser) {
+    return <p className="py-24 text-center text-xs text-text-muted">Opening the editor…</p>;
+  }
+  return (
+    <ArticleEditor
+      key={session}
+      {...props}
+      onDiscardDraft={() => {
+        clearDraft(draftKey(props.initialData?.id));
+        setSession((n) => n + 1);
+      }}
+    />
+  );
+}
+
+function ArticleEditor({
+  onDiscardDraft,
+  ...props
+}: ArticleFormProps & { onDiscardDraft: () => void }) {
+  const { initialData, pillars, listings, topics, authors, seoContext } = props;
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isEditing = Boolean(initialData?.id);
+  const storageKey = draftKey(initialData?.id);
 
-  const [title, setTitle] = useState(initialData?.title || "");
-  const [slug, setSlug] = useState(initialData?.slug || "");
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(
-    Boolean(initialData?.slug)
-  );
-  const [topicSlug, setTopicSlug] = useState(initialData?.topicSlug || topics[0]?.value || "");
-  const [authorId, setAuthorId] = useState(initialData?.authorId || authors[0]?.value || "");
-  const [description, setDescription] = useState(initialData?.description || "");
-  const [content, setContent] = useState(initialData?.content || "");
-  const [readTime, setReadTime] = useState(initialData?.readTime || 5);
-  const [featured, setFeatured] = useState(initialData?.featured || false);
-  const [editorsPick, setEditorsPick] = useState(initialData?.editorsPick || false);
-  const [trending, setTrending] = useState(initialData?.trending || false);
-  const [status, setStatus] = useState<ArticleStatus>(initialData?.status || "PUBLISHED");
+  // The saved version, and any unsaved changes this browser kept from last time.
+  const [baselineJson, setBaselineJson] = useState(() => JSON.stringify(savedValues(props)));
+  const [restored, setRestored] = useState(() => {
+    const draft = readDraft<FormValues>(storageKey);
+    if (!draft || JSON.stringify(draft.values) === baselineJson) return null;
+    // Fields added to the editor after the draft was kept start from the saved version.
+    return { savedAt: draft.savedAt, values: { ...savedValues(props), ...draft.values } };
+  });
+  const [start] = useState(() => restored?.values ?? savedValues(props));
+
+  const [title, setTitle] = useState(start.title);
+  const [slug, setSlug] = useState(start.slug);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(start.slugManuallyEdited);
+  const [topicSlug, setTopicSlug] = useState(start.topicSlug);
+  const [authorId, setAuthorId] = useState(start.authorId);
+  const [description, setDescription] = useState(start.description);
+  const [content, setContent] = useState(start.content);
+  const [readTime, setReadTime] = useState(start.readTime);
+  const [featured, setFeatured] = useState(start.featured);
+  const [editorsPick, setEditorsPick] = useState(start.editorsPick);
+  const [trending, setTrending] = useState(start.trending);
+  const [status, setStatus] = useState<ArticleStatus>(start.status);
   const [activeTab, setActiveTab] = useState<"write" | "preview">("write");
-  const [publishedAt, setPublishedAt] = useState(toLocalInput(initialData?.publishedAt));
-  const [articleType, setArticleType] = useState(initialData?.articleType || "EDITORIAL");
-  const [sponsorName, setSponsorName] = useState(initialData?.sponsorName || "");
-  const [sponsorUrl, setSponsorUrl] = useState(initialData?.sponsorUrl || "");
-  const [isPillar, setIsPillar] = useState(initialData?.isPillar || false);
-  const [pillarSlug, setPillarSlug] = useState(initialData?.pillarSlug || "");
-  const [relatedListings, setRelatedListings] = useState<string[]>(initialData?.relatedListings || []);
-  const [resources, setResources] = useState<ResourceLink[]>(initialData?.resources || []);
-  const [framework, setFramework] = useState<Record<Locale, FrameworkText>>(
-    initialData?.framework ?? { en: emptyFramework, hi: emptyFramework },
-  );
+  const [publishedAt, setPublishedAt] = useState(start.publishedAt);
+  const [articleType, setArticleType] = useState(start.articleType);
+  const [sponsorName, setSponsorName] = useState(start.sponsorName);
+  const [sponsorUrl, setSponsorUrl] = useState(start.sponsorUrl);
+  const [isPillar, setIsPillar] = useState(start.isPillar);
+  const [pillarSlug, setPillarSlug] = useState(start.pillarSlug);
+  const [relatedListings, setRelatedListings] = useState<string[]>(start.relatedListings);
+  const [resources, setResources] = useState<ResourceLink[]>(start.resources);
+  const [framework, setFramework] = useState<Record<Locale, FrameworkText>>(start.framework);
 
   // Hindi version. Title, summary and content fields edit whichever language is active.
   const [language, setLanguage] = useState<EditorLanguage>("en");
-  const [hiTitle, setHiTitle] = useState(initialData?.hi?.title || "");
-  const [hiDescription, setHiDescription] = useState(initialData?.hi?.description || "");
-  const [hiContent, setHiContent] = useState(initialData?.hi?.content || "");
+  const [hiTitle, setHiTitle] = useState(start.hiTitle);
+  const [hiDescription, setHiDescription] = useState(start.hiDescription);
+  const [hiContent, setHiContent] = useState(start.hiContent);
   const editorContent = language === "en" ? content : hiContent;
   const setEditorContent = language === "en" ? setContent : setHiContent;
 
   // SEO overrides per language; the SEO card follows the same language switch.
-  const [seo, setSeo] = useState<Record<Locale, SeoFieldsValue>>(
-    initialData?.seo ?? { en: emptySeoFields, hi: emptySeoFields },
-  );
+  const [seo, setSeo] = useState<Record<Locale, SeoFieldsValue>>(start.seo);
 
   // Cover styling states
-  const [coverPattern, setCoverPattern] = useState(initialData?.coverPattern || "orbit");
-  const [coverTones, setCoverTones] = useState(
-    initialData?.coverTones || JSON.stringify(["accent-secondary", "pink"])
-  );
-  const [coverIcon, setCoverIcon] = useState(initialData?.coverIcon || "sparkles");
-  const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || "");
-  const [imageAlt, setImageAlt] = useState(initialData?.imageAlt || "");
+  const [coverPattern, setCoverPattern] = useState(start.coverPattern);
+  const [coverTones, setCoverTones] = useState(start.coverTones);
+  const [coverIcon, setCoverIcon] = useState(start.coverIcon);
+  const [imageUrl, setImageUrl] = useState(start.imageUrl);
+  const [imageAlt, setImageAlt] = useState(start.imageAlt);
+
+  const values: FormValues = {
+    title,
+    slug,
+    slugManuallyEdited,
+    topicSlug,
+    authorId,
+    description,
+    content,
+    readTime,
+    featured,
+    editorsPick,
+    trending,
+    status,
+    publishedAt,
+    articleType,
+    sponsorName,
+    sponsorUrl,
+    isPillar,
+    pillarSlug,
+    relatedListings,
+    resources,
+    framework,
+    hiTitle,
+    hiDescription,
+    hiContent,
+    seo,
+    coverPattern,
+    coverTones,
+    coverIcon,
+    imageUrl,
+    imageAlt,
+  };
+  const valuesJson = JSON.stringify(values);
+  const unsaved = valuesJson !== baselineJson;
+
+  // Keep unsaved changes in this browser: shortly after each edit, and right
+  // away when the page is closed or refreshed. Matching the saved version again
+  // drops the draft.
+  useEffect(() => {
+    if (!unsaved) {
+      clearDraft(storageKey);
+      return;
+    }
+    const keep = () => writeDraft(storageKey, valuesJson);
+    const timer = window.setTimeout(keep, 400);
+    window.addEventListener("pagehide", keep);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pagehide", keep);
+    };
+  }, [unsaved, storageKey, valuesJson]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -303,14 +460,19 @@ export function ArticleForm({ initialData, topics, authors, pillars, listings, s
       seo,
     };
 
+    // What was sent: once saved, it is the new saved version and its draft goes.
+    const sentJson = valuesJson;
     try {
       if (isEditing && initialData?.id) {
         const res = await updateArticle(initialData.id, payload);
         if (!res.success) {
-          setError(res.error || "Failed to update article");
+          setError(`${res.error || "Failed to update article"}. Your changes are kept in this browser.`);
           setLoading(false);
           return;
         }
+        clearDraft(storageKey);
+        setBaselineJson(sentJson);
+        setRestored(null);
         setSaveSuccess(true);
         setUploadNotice(null);
         setLoading(false);
@@ -318,15 +480,19 @@ export function ArticleForm({ initialData, topics, authors, pillars, listings, s
       } else {
         const res = await createArticle(payload);
         if (!res.success) {
-          setError(res.error || "Failed to create article");
+          setError(`${res.error || "Failed to create article"}. Your changes are kept in this browser.`);
           setLoading(false);
           return;
         }
+        clearDraft(storageKey);
+        setBaselineJson(sentJson);
         router.push("/admin/articles");
         router.refresh();
       }
-    } catch {
-      setError("An unexpected error occurred while saving.");
+    } catch (err) {
+      // The request itself failed (no answer from the action), e.g. an expired login or a new deployment.
+      console.error("Saving the article failed:", err);
+      setError(saveFailureMessage(err));
       setLoading(false);
     }
   }
@@ -382,7 +548,28 @@ export function ArticleForm({ initialData, topics, authors, pillars, listings, s
         </div>
       )}
 
-      {saveSuccess && (
+      {restored && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/10 p-4 text-xs font-medium text-accent">
+          <span>
+            ↺ Your unsaved changes from {new Date(restored.savedAt).toLocaleString()} were brought back. They are
+            kept in this browser until you {isEditing ? "save" : "publish"}.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const question = isEditing
+                ? "Discard the unsaved changes and go back to the saved version of this article?"
+                : "Discard this unsaved story and start empty?";
+              if (window.confirm(question)) onDiscardDraft();
+            }}
+            className="font-bold underline hover:opacity-80"
+          >
+            Discard them
+          </button>
+        </div>
+      )}
+
+      {saveSuccess && !unsaved && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/30 bg-success/10 p-4 text-xs font-medium text-success">
           <span className="flex items-center gap-2">
             ✓ Changes saved successfully! Article is updated live.
@@ -903,7 +1090,7 @@ export function ArticleForm({ initialData, topics, authors, pillars, listings, s
       {/* Sticky Bottom Action Bar */}
       <div className="sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-surface-elevated/95 p-4 backdrop-blur-md shadow-lg">
         <div className="flex items-center gap-2">
-          {saveSuccess ? (
+          {saveSuccess && !unsaved ? (
             <span className="flex items-center gap-1.5 text-xs font-semibold text-success">
               <span className="size-2 rounded-full bg-success animate-pulse" />
               Changes saved live!
@@ -913,6 +1100,12 @@ export function ArticleForm({ initialData, topics, authors, pillars, listings, s
           ) : uploadNotice ? (
             <span className="text-xs font-medium text-primary line-clamp-1">
               💡 {uploadNotice}
+            </span>
+          ) : unsaved ? (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-text-secondary">
+              <span className="size-2 rounded-full bg-accent" />
+              Unsaved changes, kept in this browser (safe to refresh) until you{" "}
+              {isEditing ? "save" : "publish"}.
             </span>
           ) : (
             <span className="text-xs text-text-muted">

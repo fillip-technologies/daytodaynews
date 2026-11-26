@@ -16,6 +16,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Admin uploads (cover and inline images, PDFs) allow files up to 10MB, but
+    // Server Actions accept 1MB by default and the proxy (middleware) 10MB, so
+    // larger photos failed. 12MB leaves room for the form-data overhead.
+    serverActions: { bodySizeLimit: "12mb" },
+    proxyClientMaxBodySize: "12mb",
+  },
   images: {
     remotePatterns: [
       {
